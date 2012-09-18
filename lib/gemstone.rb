@@ -139,10 +139,16 @@ module Gemstone
           end
         end
 
+        #if 
+
         actual_call = self.compile_sexp([:call, :println, part_refs.last])
 
         self.compile_sexp(setup) + actual_call
 
+      elsif type == :strings_equal
+        a = primitive.shift
+        b = primitive.shift
+        "strcmp((#{self.compile_sexp(a)}).string, (#{self.compile_sexp(b)}).string)==0"
       elsif type == :dyn_str
         str = primitive.shift
         name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')
