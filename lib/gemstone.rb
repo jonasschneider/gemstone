@@ -69,9 +69,16 @@ module Gemstone
           arg = self.compile_sexp(primitive.shift)
           "gemstone_typeof(&#{arg})"
         elsif func == :typeof
-          arg = self.compile_sexp(primitive.shift)
-          "(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
-            "(gemstone_typeof(#{arg}) == GS_TYPE_FIXNUM ? \"fixnum\" : \"\")" +  ")"
+          arg = primitive.shift
+          #{}"(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
+           # "(gemstone_typeof(#{arg}) == GS_TYPE_FIXNUM ? \"fixnum\" : \"\")" +  ")"
+          name = 'typeof_string___result'
+          self.compile_sexp([:if, 
+              [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_STRING"]], 
+              [:assign_cvar, name, [:lit_str, "string"]],
+              [:assign_cvar, name, [:lit_str, "fixnum"]]
+          ])
+          name
         else
           raise "unknown call: #{func} - #{primitive.inspect}"
         end
@@ -82,7 +89,7 @@ module Gemstone
       elsif type == :assign
         name = primitive.shift.to_s
         val = self.compile_sexp(primitive.shift)
-        "struct gs_value #{name};\n #{name} = #{val};\n"
+        "struct gs_value #{name}; #{name} = #{val};\n"
       elsif type == :assign_cvar
         name = primitive.shift.to_s
         val = primitive.shift
@@ -107,6 +114,12 @@ module Gemstone
         raise 'need string' unless String === str
         name = 'lit_str_'+@literals.length.to_s+'_'+str.gsub(/[^a-zA-Z]/, '_')
         @literals << self.compile_sexp([:assign_cvar, name, str])
+        name
+      elsif type == :lit_fixnum
+        fixnum = primitive.shift
+        raise 'need fixnum' unless Fixnum === fixnum
+        name = 'lit_fixnum_'+@literals.length.to_s+'_'+fixnum.to_s
+        @literals << self.compile_sexp([:assign_cvar, name, fixnum])
         name
       elsif type == :c_const
         primitive.shift
