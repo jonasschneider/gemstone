@@ -32,4 +32,9 @@ describe Gemstone do
     out = compile_and_execute [:block, [:call, :puts, "Hello my dear"], [:call, :puts, "Bye now!"]]
     out.should eq("Hello my dear\nBye now!\n")
   end
+
+  it 'compiles a string assignment' do
+    out = compile_and_execute [:block, [:assign, :string, "Hello world"], [:call, :puts, [:lvar, :string]]]
+    out.should eq("Hello world\n")
+  end
 end
