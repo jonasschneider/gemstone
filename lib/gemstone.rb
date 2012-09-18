@@ -59,7 +59,7 @@ module Gemstone
               [:call, :printf, [:lit_str, "Runtime error, expected string"]] 
           ])
         elsif func == :printf
-          "printf(#{self.compile_sexp(primitive.shift)});printf(\"\\n\");\n"
+          "printf((#{self.compile_sexp(primitive.shift)})->string);printf(\"\\n\");\n"
         elsif func == :typeof_internal
           arg = self.compile_sexp(primitive.shift)
           "gemstone_typeof(#{arg})"
@@ -78,9 +78,9 @@ module Gemstone
         name = primitive.shift.to_s
         val = primitive.shift
         if String === val
-          "struct gs_value lvar_#{name};\ngs_str_new(&lvar_#{name}, \"#{val}\", #{val.bytesize});\n"
+          "struct gs_value #{name};\ngs_str_new(&#{name}, \"#{val}\", #{val.bytesize});\n"
         else
-          "struct gs_value lvar_#{name};\ngs_fixnum_new(&lvar_#{name}, #{val});\n"
+          "struct gs_value #{name};\ngs_fixnum_new(&#{name}, #{val});\n"
         end
       elsif type == :if
         cond = self.compile_sexp(primitive.shift)
@@ -92,9 +92,13 @@ module Gemstone
         right = self.compile_sexp(primitive.shift)
         "#{left} == #{right}"
       elsif type == :lvar
-        "&lvar_#{primitive.shift.to_s}"
+        "&#{primitive.shift.to_s}"
       elsif type == :lit_str
-        "\"#{primitive.shift}\""
+        str = primitive.shift
+        raise 'need string' unless String === str
+        name = 'lit_str_'+@literals.length.to_s
+        @literals << self.compile_sexp([:assign, name, str])
+        "&"+name
       elsif type == :c_const
         primitive.shift
       else
