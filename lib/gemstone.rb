@@ -56,7 +56,7 @@ module Gemstone
 
       val = if type == :call
         func = primitive.shift
-        if func == :puts
+        if func == :println
           arg = primitive.shift
           self.compile_sexp([:if, 
               [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_STRING"]], 
