@@ -65,9 +65,8 @@ describe Gemstone do
   end
 
   it "can send nested messages to kernel" do
-    pending
-    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [:dyn_str, "typeof"], [:dyn_str, "Hello world"]]]]
-    out.should eq("string\n")
+    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "returnstr"], [:dyn_str, "Stackstring"]]]]]
+    out.should eq("Stackstring\n")
   end#
 
   it "can compare strings" do

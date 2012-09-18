@@ -7,19 +7,32 @@ module Gemstone
     c = compiler.literals.join("\n") + main
 
     #code = 
-    wrapped = "#include <stdio.h>\n#include \"gemstone.h\"\n\nint main() { #{c} }"
+    wrapped = <<C
+#include <stdio.h>
+#include "gemstone.h"
+
+int main() {
+
+gs_stack_init();
+
+#{c} 
+
+}
+C
     code = File.new('tmp/code.c', 'w')
     code.write(wrapped)
     code.close
 
-    out = %x(gcc -Ilib/gemstone tmp/code.c -o #{binary_path} 2>&1)
+    l = 0
+    formatted = wrapped.gsub(/^/) do
+      l += 1
+      l.to_s.ljust(4)
+    end
+    puts "# CODE:\n\n#{formatted}"
+
+    out = %x(gcc -Wall -Ilib/gemstone tmp/code.c -o #{binary_path} 2>&1)
     if $? != 0
-      l = 0
-      formatted = wrapped.gsub(/^/) do
-        l += 1
-        l.to_s.ljust(4)
-      end
-      msg = "### COMPILE ERROR\n# CODE:\n\n#{formatted}\n\n # GCC OUT:\n\n #{out}"
+      msg = "### COMPILE ERROR\n# GCC OUT:\n\n #{out}"
       raise msg
     end
   end
@@ -28,6 +41,7 @@ module Gemstone
     attr_reader :literals
     def initialize
       @literals = []
+      @decls = {}
       @level = 0
     end
 
@@ -62,7 +76,7 @@ module Gemstone
               [:call, :printf, [:lit_str, "Runtime error, expected string"]] 
           ])
         elsif func == :printf
-          "printf((#{self.compile_sexp(primitive.shift)}).string);printf(\"\\n\");\n"
+          "printf(\"%s\", (#{self.compile_sexp(primitive.shift)}).string);printf(\"\\n\");\n"
         elsif func == :typeof_internal
           arg = self.compile_sexp(primitive.shift)
           "gemstone_typeof(&#{arg})"
@@ -87,14 +101,27 @@ module Gemstone
       elsif type == :assign
         name = primitive.shift.to_s
         val = self.compile_sexp(primitive.shift)
-        "struct gs_value #{name}; #{name} = #{val};\n"
+        if @decls[name]
+          decl = ''
+        else
+          @decls[name] = true
+          decl = "struct gs_value #{name};\n"
+        end
+        "#{decl}#{name} = #{val};\n"
       elsif type == :assign_cvar
         name = primitive.shift.to_s
         val = primitive.shift
-        if String === val
-          "struct gs_value #{name};\ngs_str_new(&#{name}, \"#{val}\", #{val.bytesize});\n"
+
+        if @decls[name]
+          decl = ''
         else
-          "struct gs_value #{name};\ngs_fixnum_new(&#{name}, #{val});\n"
+          @decls[name] = true
+          decl = "struct gs_value #{name};\n"
+        end
+        if String === val
+          "#{decl}gs_str_new(&#{name}, \"#{val}\", #{val.bytesize});\n"
+        else
+          "#{decl}gs_fixnum_new(&#{name}, #{val});\n"
         end
       elsif type == :if
         cond = self.compile_sexp(primitive.shift)
@@ -125,35 +152,70 @@ module Gemstone
 
 
       elsif type == :send
-        target = primitive.shift
-        raise 'can only send to kernel' if target != :kernel
-        message_parts = primitive.shift
-        setup = [:block]
-        part_refs = message_parts.map do |part|
-          r = self.compile_sexp(part)
-          if Hash === r
-            setup << r[:setup]
-            r[:reference]
-          else
-            r
+        def traverse(node)
+          node = node.dup
+          target = node.shift
+          steps = [:block]
+          raise 'can only send to kernel' if target != :kernel
+          message_parts = node.shift.reverse
+
+          #steps << [:push, [:lit_fixnum, message_parts.length]]
+
+          part_refs = message_parts.map do |part|
+            if part.first == :send
+              part.shift
+              @level += 1
+              r = traverse(part)
+
+              @level -= 1
+            else
+              log "compiling: #{part}"
+              r = self.compile_sexp(part)
+              
+            end
+
+            steps << r
           end
+
+          steps << [:block, 
+              [:assign, :called_func, [:pop]],
+              [:assign, :arg, [:pop]],
+              
+              [:if, 
+                [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
+                [:call, :println, [:lvar, :arg]],
+                [:push, [:lvar, :arg]],
+              ]
+            ]
+          
+          steps
         end
+        res = traverse(primitive)
 
-        #if 
 
-        actual_call = self.compile_sexp([:call, :println, part_refs.last])
-
-        self.compile_sexp(setup) + actual_call
+        self.compile_sexp(res)
 
       elsif type == :strings_equal
         a = primitive.shift
         b = primitive.shift
         "strcmp((#{self.compile_sexp(a)}).string, (#{self.compile_sexp(b)}).string)==0"
+      elsif type == :nopstr
+        str = primitive.shift
+        { setup: [:nop], reference: str }
+      
+
+      elsif type == :pop
+        "gs_stack_pop()"
+      elsif type == :push
+        what = self.compile_sexp(primitive.shift)
+        "gs_stack_push(#{what});"
+      
+
       elsif type == :dyn_str
         str = primitive.shift
-        name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')
+        name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')[0,30]
 
-        { setup: [:assign_cvar, name, str], reference: [:lvar, name] }
+        [:block, [:assign_cvar, name, str], [:push, [:lvar, name]]]
       else
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end
