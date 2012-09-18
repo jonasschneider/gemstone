@@ -16,7 +16,12 @@ module Gemstone
 
     out = %x(gcc -Ilib/gemstone tmp/code.c -o #{binary_path} 2>&1)
     if $? != 0
-      msg = "### COMPILE ERROR\n# CODE:\n\n#{wrapped}\n\n # GCC OUT:\n\n #{out}"
+      l = 0
+      formatted = wrapped.gsub(/^/) do
+        l += 1
+        l.to_s.ljust(4)
+      end
+      msg = "### COMPILE ERROR\n# CODE:\n\n#{formatted}\n\n # GCC OUT:\n\n #{out}"
       raise msg
     end
   end
@@ -28,15 +33,13 @@ module Gemstone
       @level = 0
     end
 
-    def log(msg)
+    def log(msg, additional_indent = 0)
       indent = '  '*@level
-      puts "#{indent} #{msg.gsub("\n", "\n  "+indent)}"
+      puts "#{indent} #{msg.gsub("\n", "\n "+indent+' '*additional_indent)}"
     end
 
 
     def compile_sexp(primitive)
-      primitive = primitive.dup
-
       log primitive.inspect
       @level += 1
       if String === primitive
@@ -46,6 +49,8 @@ module Gemstone
       if Fixnum === primitive
         return primitive.to_s
       end
+
+      primitive = primitive.dup
 
       type = primitive.shift
 
@@ -59,10 +64,10 @@ module Gemstone
               [:call, :printf, [:lit_str, "Runtime error, expected string"]] 
           ])
         elsif func == :printf
-          "printf((#{self.compile_sexp(primitive.shift)})->string);printf(\"\\n\");\n"
+          "printf((#{self.compile_sexp(primitive.shift)}).string);printf(\"\\n\");\n"
         elsif func == :typeof_internal
           arg = self.compile_sexp(primitive.shift)
-          "gemstone_typeof(#{arg})"
+          "gemstone_typeof(&#{arg})"
         elsif func == :typeof
           arg = self.compile_sexp(primitive.shift)
           "(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
@@ -75,6 +80,10 @@ module Gemstone
           self.compile_sexp(statement)
         end.join("\n")
       elsif type == :assign
+        name = primitive.shift.to_s
+        val = self.compile_sexp(primitive.shift)
+        "struct gs_value #{name};\n #{name} = #{val};\n"
+      elsif type == :assign_cvar
         name = primitive.shift.to_s
         val = primitive.shift
         if String === val
@@ -92,20 +101,20 @@ module Gemstone
         right = self.compile_sexp(primitive.shift)
         "#{left} == #{right}"
       elsif type == :lvar
-        "&#{primitive.shift.to_s}"
+        primitive.shift.to_s
       elsif type == :lit_str
         str = primitive.shift
         raise 'need string' unless String === str
-        name = 'lit_str_'+@literals.length.to_s
-        @literals << self.compile_sexp([:assign, name, str])
-        "&"+name
+        name = 'lit_str_'+@literals.length.to_s+'_'+str.gsub(/[^a-zA-Z]/, '_')
+        @literals << self.compile_sexp([:assign_cvar, name, str])
+        name
       elsif type == :c_const
         primitive.shift
       else
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end
       @level -= 1
-      log "=> #{val}"
+      log "=> #{val}", 3
       val
     end
   end
