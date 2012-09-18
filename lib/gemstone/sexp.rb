@@ -18,7 +18,15 @@ module Gemstone
       type = primitive.shift
 
       if type == :call
-        "printf(#{self.compile(primitive.last)});printf(\"\\n\");\n"
+        func = primitive.shift
+        if func == :puts
+          "printf(#{self.compile(primitive.shift)});printf(\"\\n\");\n"
+        elsif func == :typeof
+          arg = self.compile(primitive.shift)
+          "(#{arg}->type == GEMSTONE_TYPE_STRING ? \"string\" : "")"
+        else
+          raise "unknown call: #{func} - #{primitive.inspect}"
+        end
       elsif type == :block
         primitive.map do |statement|
           self.compile(statement)
@@ -26,7 +34,11 @@ module Gemstone
       elsif type == :assign
         name = primitive.shift.to_s
         val = primitive.shift
-        "char #{name}[#{val.length}] = {\"#{val}\"};\n"
+        if String === val
+          "char #{name}[#{val.length}] = {\"#{val}\"};\n"
+        else
+          "unsigned long #{name} = #{val};\n"
+        end
       elsif type == :lvar
         "#{primitive.shift.to_s}"
       else

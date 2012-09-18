@@ -1,0 +1,1 @@
+#define GEMSTONE_TYPE_STRING 0
