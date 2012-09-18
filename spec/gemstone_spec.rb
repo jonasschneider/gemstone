@@ -14,38 +14,37 @@ describe Gemstone do
   end
 
   it 'compiles a hello world' do
-    out = compile_and_execute [:call, :puts, "Hello world"]
+    out = compile_and_execute [:call, :puts, [:lit_str, "Hello world"]]
     out.should eq("Hello world\n")
   end
 
   it 'compiles a hello world with another string' do
-    out = compile_and_execute [:call, :puts, "Hello my dear"]
+    out = compile_and_execute [:call, :puts, [:lit_str, "Hello my dear"]]
     out.should eq("Hello my dear\n")
   end
 
   it 'compiles a hello world in a block' do
-    out = compile_and_execute [:block, [:call, :puts, "Hello my dear"]]
+    out = compile_and_execute [:block, [:call, :puts, [:lit_str, "Hello my dear"]]]
     out.should eq("Hello my dear\n")
   end
 
   it 'compiles two hello worlds' do
-    out = compile_and_execute [:block, [:call, :puts, "Hello my dear"], [:call, :puts, "Bye now!"]]
+    out = compile_and_execute [:block, [:call, :puts, [:lit_str, "Hello my dear"]], [:call, :puts, [:lit_str, "Bye now!"]]]
     out.should eq("Hello my dear\nBye now!\n")
   end
 
   it 'compiles a string assignment' do
-    out = compile_and_execute [:block, [:assign, :string, "Hello world"], [:call, :puts, [:lvar, :string]]]
+    out = compile_and_execute [:block, [:assign, :string, [:lit_str, "Hello world"]], [:call, :puts, [:lvar, :string]]]
     out.should eq("Hello world\n")
   end
 
   it 'fails when trying to printf a number' do
-    pending
     out = compile_and_execute [:block, [:assign, :num, 1337], [:call, :puts, [:lvar, :num]]]
-    out.should eq("Hello world\n")
+    out.should eq("Runtime error: expected string\n")
   end
 
   it "shows the type of a string" do
-    out = compile_and_execute [:block, [:assign, :string, "Hello world"], [:call, :puts, [:call, :typeof, [:lvar, :string]]]]
+    out = compile_and_execute [:block, [:assign, :string, [:lit_str, "Hello world"]], [:call, :puts, [:call, :typeof, [:lvar, :string]]]]
     out.should eq("string\n")
   end
 
