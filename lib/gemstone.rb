@@ -84,13 +84,11 @@ C
           arg = primitive.shift
           #{}"(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
            # "(gemstone_typeof(#{arg}) == GS_TYPE_FIXNUM ? \"fixnum\" : \"\")" +  ")"
-          name = 'typeof_string___result'
           self.compile_sexp([:if, 
               [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_STRING"]], 
-              [:assign_cvar, name, [:lit_str, "string"]],
-              [:assign_cvar, name, [:lit_str, "fixnum"]]
+              [:push, [:lit_str, "string"]],
+              [:push, [:lit_str, "fixnum"]]
           ])
-          name
         else
           raise "unknown call: #{func} - #{primitive.inspect}"
         end
@@ -184,7 +182,15 @@ C
               [:if, 
                 [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
                 [:call, :println, [:lvar, :arg]],
-                [:push, [:lvar, :arg]],
+                [:if, 
+                  [:strings_equal, [:lvar, :called_func], [:lit_str, "typeof"]],
+                  [:call, :typeof, [:lvar, :arg]],
+                  [:if, 
+                    [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
+                    [:push, [:lvar, :arg]],
+                    [:nop]
+                  ]
+                ]
               ]
             ]
           
@@ -210,12 +216,18 @@ C
         what = self.compile_sexp(primitive.shift)
         "gs_stack_push(#{what});"
       
+      elsif type == :nop
 
       elsif type == :dyn_str
         str = primitive.shift
         name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')[0,30]
 
         [:block, [:assign_cvar, name, str], [:push, [:lvar, name]]]
+      elsif type == :dyn_fixnum
+        num = primitive.shift
+        name = 'dyn_fixnum_'+num.to_s
+
+        [:block, [:assign_cvar, name, num], [:push, [:lvar, name]]]
       else
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end

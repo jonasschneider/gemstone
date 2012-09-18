@@ -83,17 +83,13 @@ describe Gemstone do
     out.should eq("no match\n")
   end
 
-  it "raises when trying to nest calls"
-
   it "shows the type of a string" do
-    pending
-    out = compile_and_execute [:block, [:assign, :string, [:lit_str, "Hello world"]], [:call, :println, [:call, :typeof, [:lvar, :string]]]]
+    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "typeof"], [:dyn_str, "Stackstring"]]]]]
     out.should eq("string\n")
   end
 
   it "shows the type of a number" do
-    pending
-    out = compile_and_execute [:block, [:assign, :num, 1337], [:call, :println, [:call, :typeof, [:lvar, :num]]]]
+    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "typeof"], [:dyn_fixnum, 1337]]]]]
     out.should eq("fixnum\n")
   end
 
