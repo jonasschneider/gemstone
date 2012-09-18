@@ -36,7 +36,8 @@ module Gemstone
         "printf(#{self.compile_sexp(primitive.shift)});printf(\"\\n\");\n"
       elsif func == :typeof
         arg = self.compile_sexp(primitive.shift)
-        "(gemstone_typeof(#{arg}) == GEMSTONE_TYPE_STRING ? \"string\" : \"\")"
+        "(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
+          "(gemstone_typeof(#{arg}) == GS_TYPE_FIXNUM ? \"fixnum\" : \"\")" +  ")"
       else
         raise "unknown call: #{func} - #{primitive.inspect}"
       end
@@ -48,17 +49,21 @@ module Gemstone
       name = primitive.shift.to_s
       val = primitive.shift
       if String === val
-        "char #{name}[#{val.length}] = {\"#{val}\"};\n"
+        "struct gs_value lvar_#{name};\ngs_str_new(&lvar_#{name}, \"#{val}\", #{val.bytesize});\n"
       else
-        "unsigned long #{name} = #{val};\n"
+        "struct gs_value lvar_#{name};\ngs_fixnum_new(&lvar_#{name}, #{val});\n"
       end
     elsif type == :if
       cond = self.compile_sexp(primitive.shift)
       then_code = self.compile_sexp(primitive.shift)
       else_code = self.compile_sexp(primitive.shift)
       "if(#{cond}) {\n#{then_code}\n} else { \n#{else_code}\n}\n"
+    elsif type == :primitive_equal
+      left = self.compile_sexp(primitive.shift)
+      right = self.compile_sexp(primitive.shift)
+      "#{left} == #{right}"
     elsif type == :lvar
-      "#{primitive.shift.to_s}"
+      "&lvar_#{primitive.shift.to_s}"
     else
       raise "unknown sexp type #{type} - #{primitive.inspect}"
     end
