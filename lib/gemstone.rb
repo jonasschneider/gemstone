@@ -1,5 +1,3 @@
-require 'gemstone/sexp'
-
 module Gemstone
   def self.compile(list_sexp, binary_path)
 
@@ -123,6 +121,33 @@ module Gemstone
         name
       elsif type == :c_const
         primitive.shift
+
+
+
+      elsif type == :send
+        target = primitive.shift
+        raise 'can only send to kernel' if target != :kernel
+        message_parts = primitive.shift
+        setup = [:block]
+        part_refs = message_parts.map do |part|
+          r = self.compile_sexp(part)
+          if Hash === r
+            setup << r[:setup]
+            r[:reference]
+          else
+            r
+          end
+        end
+
+        actual_call = self.compile_sexp([:call, :println, part_refs.last])
+
+        self.compile_sexp(setup) + actual_call
+
+      elsif type == :dyn_str
+        str = primitive.shift
+        name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')
+
+        { setup: [:assign_cvar, name, str], reference: [:lvar, name] }
       else
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end

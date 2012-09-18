@@ -60,7 +60,7 @@ describe Gemstone do
   end
 
   it "can send messages to kernel" do
-    out = compile_and_execute [:send, :kernel, [:println, [:lit_str, "Hello world"]]]
+    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:dyn_str, "Hello world"]]]
     out.should eq("Hello world\n")
   end
 
