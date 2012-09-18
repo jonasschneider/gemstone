@@ -1,6 +1,7 @@
 module Gemstone
   def self.compile(sexp)
-    c = "#include <stdio.h>\nint main() { printf(\"Hello world\"); }"
+
+    c = "#include <stdio.h>\nint main() { printf(\"#{sexp.last}\"); }"
     code = File.new('tmp/code.c', 'w')
     code.write(c)
     code.close
