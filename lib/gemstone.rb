@@ -17,6 +17,8 @@ gs_stack_init();
 
 #{c} 
 
+return 0;
+
 }
 C
     code = File.new('tmp/code.c', 'w')
@@ -30,7 +32,7 @@ C
     end
     puts "# CODE:\n\n#{formatted}"
 
-    out = %x(gcc -Wall -Ilib/gemstone tmp/code.c -o #{binary_path} 2>&1)
+    out = %x(gcc -Wall -g -Ilib/gemstone tmp/code.c -o #{binary_path} 2>&1)
     if $? != 0
       msg = "### COMPILE ERROR\n# GCC OUT:\n\n #{out}"
       raise msg
@@ -86,8 +88,8 @@ C
            # "(gemstone_typeof(#{arg}) == GS_TYPE_FIXNUM ? \"fixnum\" : \"\")" +  ")"
           self.compile_sexp([:if, 
               [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_STRING"]], 
-              [:push, [:lit_str, "string"]],
-              [:push, [:lit_str, "fixnum"]]
+              [:setres, [:lit_str, "string"]],
+              [:setres, [:lit_str, "fixnum"]]
           ])
         else
           raise "unknown call: #{func} - #{primitive.inspect}"
@@ -157,7 +159,7 @@ C
           raise 'can only send to kernel' if target != :kernel
           message_parts = node.shift.reverse
 
-          #steps << [:push, [:lit_fixnum, message_parts.length]]
+          steps << [:push, message_parts.inspect]
 
           part_refs = message_parts.map do |part|
             if part.first == :send
@@ -176,8 +178,8 @@ C
           end
 
           steps << [:block, 
-              [:assign, :called_func, [:pop]],
-              [:assign, :arg, [:pop]],
+              [:assign, :called_func, [:poparg]],
+              [:assign, :arg, [:poparg]],
               
               [:if, 
                 [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
@@ -187,7 +189,7 @@ C
                   [:call, :typeof, [:lvar, :arg]],
                   [:if, 
                     [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
-                    [:push, [:lvar, :arg]],
+                    [:pusharg, [:lvar, :arg]],
                     [:nop]
                   ]
                 ]
@@ -209,25 +211,30 @@ C
         str = primitive.shift
         { setup: [:nop], reference: str }
       
-
-      elsif type == :pop
-        "gs_stack_pop()"
       elsif type == :push
+        "gs_stack_push();                           // >>>>>>>>>>>> #{primitive.shift}"
+      elsif type == :pop
+        "gs_stack_pop();                         // <<<<<<<<<<<<"
+
+      elsif type == :poparg
+        "*gs_argstack_pop();                  // <<<"
+      elsif type == :pusharg
         what = self.compile_sexp(primitive.shift)
-        "gs_stack_push(#{what});"
-      
+        "gs_argstack_push(&#{what});                  // >>>"
+      elsif type == :setres
+        "(*gs_stack_pointer).result = &#{self.compile_sexp(primitive.shift)};"
       elsif type == :nop
 
       elsif type == :dyn_str
         str = primitive.shift
         name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')[0,30]
 
-        [:block, [:assign_cvar, name, str], [:push, [:lvar, name]]]
+        [:block, [:assign_cvar, name, str], [:pusharg, [:lvar, name]]]
       elsif type == :dyn_fixnum
         num = primitive.shift
         name = 'dyn_fixnum_'+num.to_s
 
-        [:block, [:assign_cvar, name, num], [:push, [:lvar, name]]]
+        [:block, [:assign_cvar, name, num], [:pusharg, [:lvar, name]]]
       else
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end

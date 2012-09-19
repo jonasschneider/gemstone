@@ -10,7 +10,9 @@ describe Gemstone do
 
   def compile_and_execute(sexp)
     Gemstone.compile sexp, path_to_binary
-    %x(#{path_to_binary})
+    o = %x(#{path_to_binary})
+    $?.exitstatus.should eq(0)
+    o
   end
 
   it 'compiles a hello world' do
@@ -67,7 +69,7 @@ describe Gemstone do
   it "can send nested messages to kernel" do
     out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "returnstr"], [:dyn_str, "Stackstring"]]]]]
     out.should eq("Stackstring\n")
-  end#
+  end
 
   it "can compare strings" do
     out = compile_and_execute [:block, 
