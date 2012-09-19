@@ -175,26 +175,10 @@ C
             end
 
             steps << r
+            steps << [:pusharg, [:get_inner_res]]
           end
 
-          steps << [:block, 
-              [:assign, :called_func, [:poparg]],
-              [:assign, :arg, [:poparg]],
-              
-              [:if, 
-                [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
-                [:call, :println, [:lvar, :arg]],
-                [:if, 
-                  [:strings_equal, [:lvar, :called_func], [:lit_str, "typeof"]],
-                  [:call, :typeof, [:lvar, :arg]],
-                  [:if, 
-                    [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
-                    [:pusharg, [:lvar, :arg]],
-                    [:nop]
-                  ]
-                ]
-              ]
-            ]
+          steps << [:kernel_dispatch]
           
           steps
         end
@@ -222,8 +206,34 @@ C
         what = self.compile_sexp(primitive.shift)
         "gs_argstack_push(&#{what});                  // >>>"
       elsif type == :setres
-        "(*gs_stack_pointer).result = &#{self.compile_sexp(primitive.shift)};"
+        "(*gs_stack_pointer).result = &#{self.compile_sexp(primitive.shift)};                         // ============"
+      elsif type == :get_inner_res
+        "*(gs_stack_pointer+1)->result"
       elsif type == :nop
+
+      elsif type == :kernel_dispatch
+        sexp = 
+        [:block, 
+          [:assign, :called_func, [:poparg]],
+          [:assign, :arg, [:poparg]],
+          
+          [:if, 
+            [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
+            [:call, :println, [:lvar, :arg]],
+            [:if, 
+              [:strings_equal, [:lvar, :called_func], [:lit_str, "typeof"]],
+              [:call, :typeof, [:lvar, :arg]],
+              [:if, 
+                [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
+                [:setres, [:lvar, :arg]],
+                [:nop]
+              ]
+            ]
+          ],
+          [:setres, [:lit_str, "my return value"]]
+        ]
+
+        self.compile_sexp(sexp)
 
       elsif type == :dyn_str
         str = primitive.shift

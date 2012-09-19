@@ -71,6 +71,48 @@ describe Gemstone do
     out.should eq("Stackstring\n")
   end
 
+  it "can transform send" do
+    pendin
+    r = Gemstone.transform_send [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "returnstr"], [:dyn_str, "Stackstring"]]]]]
+    r.should == [:block]
+  end
+
+  it "runs puts from stack" do
+    out = compile_and_execute [:block,
+      [:push],
+      [:pusharg, [:lit_str, "Stackstring"]],
+      [:pusharg, [:lit_str, "puts"]],
+      [:kernel_dispatch]
+    ]
+    out.should eq("Stackstring\n")
+  end
+
+  it "runs puts from stack with argument from deeper within" do
+    out = compile_and_execute [:block,
+      [:push],
+      [:push],
+
+      [:call, :printf, [:lit_str, "Pushed"]],
+      
+      [:pusharg, [:lit_str, "Stackstring"]],
+      [:pusharg, [:lit_str, "returnstr"]],
+
+      [:call, :printf, [:lit_str, "Dispatching returnstr"]],
+      [:kernel_dispatch],
+      [:call, :printf, [:lit_str, "Dispatched it"]],
+
+      [:pop],
+      [:pusharg, [:get_inner_res]],
+
+      [:call, :printf, [:lit_str, "Result was:"]],
+      [:call, :printf, [:get_inner_res]],
+
+      [:pusharg, [:lit_str, "puts"]],
+      [:kernel_dispatch]
+    ]
+    out.should eq("Stackstring\n")
+  end
+
   it "can compare strings" do
     out = compile_and_execute [:block, 
         [:assign, :a, [:lit_str, "Hello world"]],
