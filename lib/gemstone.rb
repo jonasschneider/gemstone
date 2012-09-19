@@ -4,7 +4,7 @@ module Gemstone
     compiler = Compiler.new
     main = compiler.compile_sexp(list_sexp)
 
-    c = compiler.literals.join("\n") + main
+    c = main
 
     #code = 
     wrapped = <<C
@@ -15,6 +15,8 @@ int main() {
 
 gs_stack_init();
 gs_stack_push_with_lscope(); // so we have a local scope
+
+
 #{c} 
 
 return 0;
@@ -108,21 +110,6 @@ C
           decl = "struct gs_value *#{name};\n"
         end
         "#{decl}#{name} = #{val};\n"
-      elsif type == :assign_cvar
-        name = primitive.shift.to_s
-        val = primitive.shift
-
-        if @decls[name]
-          decl = ''
-        else
-          @decls[name] = true
-          decl = "struct gs_value *#{name} = malloc(sizeof(struct gs_value));\n"
-        end
-        if String === val
-          "#{decl}gs_str_new(#{name}, \"#{val}\", #{val.bytesize});\n"
-        else
-          "#{decl}gs_fixnum_new(#{name}, #{val});\n"
-        end
       elsif type == :if
         cond = self.compile_sexp(primitive.shift)
         then_code = self.compile_sexp(primitive.shift)
@@ -140,15 +127,11 @@ C
       elsif type == :lit_str
         str = primitive.shift
         raise 'need string' unless String === str
-        name = 'lit_str_'+@literals.length.to_s+'_'+str.gsub(/[^a-zA-Z]/, '_')
-        @literals << self.compile_sexp([:assign_cvar, name, str])
-        name
+        "gs_string_literal(\"#{str}\", #{str.bytesize})"
       elsif type == :lit_fixnum
         fixnum = primitive.shift
         raise 'need fixnum' unless Fixnum === fixnum
-        name = 'lit_fixnum_'+@literals.length.to_s+'_'+fixnum.to_s
-        @literals << self.compile_sexp([:assign_cvar, name, fixnum])
-        name
+        "gs_fixnum_literal(#{fixnum})"
       elsif type == :c_const
         primitive.shift
 
