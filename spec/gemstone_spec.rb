@@ -152,12 +152,12 @@ describe Gemstone do
   end
 
   it "shows the type of a string" do
-    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "typeof"], [:dyn_str, "Stackstring"]]]]]
+    out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "typeof"], [:lit_str, "Stackstring"]]]]]
     out.should eq("string\n")
   end
 
   it "shows the type of a number" do
-    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "typeof"], [:dyn_fixnum, 1337]]]]]
+    out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "typeof"], [:lit_fixnum, 1337]]]]]
     out.should eq("fixnum\n")
   end
 
