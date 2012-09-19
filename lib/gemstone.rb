@@ -228,42 +228,37 @@ C
       val
     end
 
-    def unwind_send_stack(sexp)
-      def traverse(node)
-        node = node.dup
-        puts node.inspect
-        target = node.shift
-        steps = []
-        raise 'can only send to kernel' if target != :kernel
-        message_parts = node.shift.reverse
+    def unwind_send_stack(node)
+      node = node.dup
+      puts node.inspect
+      target = node.shift
+      steps = []
+      raise 'can only send to kernel' if target != :kernel
+      message_parts = node.shift.reverse
 
-        steps << [:push]
+      steps << [:push]
 
-        part_refs = message_parts.map do |part|
-          if part.first == :send
-            part.shift
-            @level += 1
-            steps.concat traverse(part)
+      part_refs = message_parts.map do |part|
+        if part.first == :send
+          # Nested call
+          part.shift
 
-            @level -= 1
-            steps << [:pusharg, [:get_inner_res]]
-          else
-            #log "compiling: #{part}"
-            #r = self.compile_sexp(part)
-            steps << [:pusharg, part]
+          @level += 1
+          steps.concat unwind_send_stack(part)
+          @level -= 1
 
-          end
-
+          steps << [:pusharg, [:get_inner_res]]
+        else
+          # Static call
+          steps << [:pusharg, part]
         end
 
-        steps << [:kernel_dispatch]
-        steps << [:pop]
-        
-        steps
       end
 
-      res = traverse(sexp)
-
+      steps << [:kernel_dispatch]
+      steps << [:pop]
+      
+      steps
     end
   end
 end
