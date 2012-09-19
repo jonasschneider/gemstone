@@ -139,15 +139,15 @@ describe Gemstone do
 
   it "can compare strings" do
     out = compile_and_execute [:block, 
-        [:assign, :a, [:lit_str, "Hello world"]],
-        [:assign, :b, [:lit_str, "Hello world"]],
-        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
+        [:lvar_assign, :a, [:lit_str, "Hello world"]],
+        [:lvar_assign, :b, [:lit_str, "Hello world"]],
+        [:if, [:strings_equal, [:lvar_get, :a], [:lvar_get, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
     out.should eq("match\n")
 
     out = compile_and_execute [:block, 
-        [:assign, :a, [:lit_str, "Hello world"]],
-        [:assign, :b, [:lit_str, "Bye world"]],
-        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
+        [:lvar_assign, :a, [:lit_str, "Hello world"]],
+        [:lvar_assign, :b, [:lit_str, "Bye world"]],
+        [:if, [:strings_equal, [:lvar_get, :a], [:lvar_get, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
     out.should eq("no match\n")
   end
 

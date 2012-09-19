@@ -132,8 +132,11 @@ C
         left = self.compile_sexp(primitive.shift)
         right = self.compile_sexp(primitive.shift)
         "#{left} == #{right}"
+      
+
       elsif type == :lvar
         primitive.shift.to_s
+      
       elsif type == :lit_str
         str = primitive.shift
         raise 'need string' unless String === str
@@ -149,6 +152,12 @@ C
       elsif type == :c_const
         primitive.shift
 
+
+      elsif type == :lvar_assign
+        self.compile_sexp([:assign, *primitive])
+
+      elsif type == :lvar_get
+        self.compile_sexp([:lvar, *primitive])
 
 
       elsif type == :send
