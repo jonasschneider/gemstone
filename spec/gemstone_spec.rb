@@ -105,6 +105,24 @@ describe Gemstone do
     out.should eq("Stackstring\n")
   end
 
+  it "sets a default message when the dispatched action does not set a return value" do
+    out = compile_and_execute [:block,
+      [:push],
+      [:push],
+
+      [:pusharg, [:lit_str, "some string"]],
+      [:pusharg, [:lit_str, "puts"]],
+      [:kernel_dispatch],
+
+      [:pop],
+
+      [:pusharg, [:get_inner_res]],
+      [:pusharg, [:lit_str, "puts"]],
+      [:kernel_dispatch]
+    ]
+    out.should eq("some string\nlast inner call did not provide a return value\n")
+  end
+
   it "can compare strings" do
     out = compile_and_execute [:block, 
         [:assign, :a, [:lit_str, "Hello world"]],

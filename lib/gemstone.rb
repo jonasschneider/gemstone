@@ -229,9 +229,9 @@ C
                 [:nop]
               ]
             ]
-          ]
-          #,
-          #[:setres, [:lit_str, "my return value"]]
+          ],
+          
+          [:setres, [:lit_str, "last inner call did not provide a return value"]]
         ]
 
         self.compile_sexp(sexp)
