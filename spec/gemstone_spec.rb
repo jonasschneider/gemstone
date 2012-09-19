@@ -92,21 +92,13 @@ describe Gemstone do
       [:push],
       [:push],
 
-      [:call, :printf, [:lit_str, "Pushed"]],
-      
       [:pusharg, [:lit_str, "Stackstring"]],
       [:pusharg, [:lit_str, "returnstr"]],
-
-      [:call, :printf, [:lit_str, "Dispatching returnstr"]],
       [:kernel_dispatch],
-      [:call, :printf, [:lit_str, "Dispatched it"]],
 
       [:pop],
+
       [:pusharg, [:get_inner_res]],
-
-      [:call, :printf, [:lit_str, "Result was:"]],
-      [:call, :printf, [:get_inner_res]],
-
       [:pusharg, [:lit_str, "puts"]],
       [:kernel_dispatch]
     ]

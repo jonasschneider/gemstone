@@ -229,8 +229,9 @@ C
                 [:nop]
               ]
             ]
-          ],
-          [:setres, [:lit_str, "my return value"]]
+          ]
+          #,
+          #[:setres, [:lit_str, "my return value"]]
         ]
 
         self.compile_sexp(sexp)
