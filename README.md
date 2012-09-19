@@ -1,4 +1,4 @@
-# Gemstone
+# Gemstone [![Build Status](https://secure.travis-ci.org/jonasschneider/gemstone.png)](http://travis-ci.org/jonasschneider/gemstone)
 
 This is an experimental implementation of a compiler backend from a Rubyish language to C. It's intended mainly as code excercise and demonstration of the awesomeness of pure TDD. Since it's a backend, it doesn't accept real syntax, but an AST-like Sexp, as input. The output is (horribly ugly) C that compiles (at least) on recent versions of OS X.
 
