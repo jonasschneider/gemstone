@@ -14,7 +14,7 @@ module Gemstone
 int main() {
 
 gs_stack_init();
-
+gs_stack_push_with_lscope(); // so we have a local scope
 #{c} 
 
 return 0;
@@ -32,7 +32,7 @@ C
     end
     puts "# CODE:\n\n#{formatted}"
 
-    out = %x(gcc -Wall -g -Ilib/gemstone tmp/code.c -o #{binary_path} 2>&1)
+    out = %x(gcc -Wall -g -DDEBUG -Iinclude tmp/code.c -o #{binary_path} 2>&1)
     if $? != 0
       msg = "### COMPILE ERROR\n# GCC OUT:\n\n #{out}"
       raise msg
@@ -78,10 +78,10 @@ C
               [:call, :printf, [:lit_str, "Runtime error, expected string"]] 
           ])
         elsif func == :printf
-          "printf(\"%s\", (#{self.compile_sexp(primitive.shift)}).string);printf(\"\\n\");\n"
+          "printf(\"%s\", #{self.compile_sexp([:getstring, primitive.shift])});printf(\"\\n\");\n"
         elsif func == :typeof_internal
           arg = self.compile_sexp(primitive.shift)
-          "gemstone_typeof(&#{arg})"
+          "gemstone_typeof(#{arg})"
         elsif func == :typeof
           arg = primitive.shift
           #{}"(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
@@ -105,7 +105,7 @@ C
           decl = ''
         else
           @decls[name] = true
-          decl = "struct gs_value #{name};\n"
+          decl = "struct gs_value *#{name};\n"
         end
         "#{decl}#{name} = #{val};\n"
       elsif type == :assign_cvar
@@ -116,12 +116,12 @@ C
           decl = ''
         else
           @decls[name] = true
-          decl = "struct gs_value #{name};\n"
+          decl = "struct gs_value *#{name} = malloc(sizeof(struct gs_value));\n"
         end
         if String === val
-          "#{decl}gs_str_new(&#{name}, \"#{val}\", #{val.bytesize});\n"
+          "#{decl}gs_str_new(#{name}, \"#{val}\", #{val.bytesize});\n"
         else
-          "#{decl}gs_fixnum_new(&#{name}, #{val});\n"
+          "#{decl}gs_fixnum_new(#{name}, #{val});\n"
         end
       elsif type == :if
         cond = self.compile_sexp(primitive.shift)
@@ -154,20 +154,24 @@ C
 
 
       elsif type == :lvar_assign
-        self.compile_sexp([:assign, *primitive])
+        n, v = self.compile_sexp([:getstring, primitive.shift]), self.compile_sexp(primitive.shift)
+        "gs_lvars_assign(#{n}, #{v});"
 
       elsif type == :lvar_get
-        self.compile_sexp([:lvar, *primitive])
+        n = self.compile_sexp([:getstring, primitive.shift])
+        "gs_lvars_fetch(#{n})"
 
+      elsif type == :getstring
+        "(#{self.compile_sexp(primitive.shift)})->string"
 
       elsif type == :send
         res = [:block].concat unwind_send_stack(primitive)
         self.compile_sexp(res)
 
       elsif type == :strings_equal
-        a = primitive.shift
-        b = primitive.shift
-        "strcmp((#{self.compile_sexp(a)}).string, (#{self.compile_sexp(b)}).string)==0"
+        a = self.compile_sexp([:getstring, primitive.shift])
+        b = self.compile_sexp([:getstring, primitive.shift])
+        "strcmp(#{a}, #{b})==0"
       elsif type == :nopstr
         str = primitive.shift
         { setup: [:nop], reference: str }
@@ -178,16 +182,16 @@ C
         "gs_stack_pop();                         // <<<<<<<<<<<<"
 
       elsif type == :poparg
-        "*gs_argstack_pop();                  // <<<"
+        "gs_argstack_pop()"
       elsif type == :pusharg
         what = self.compile_sexp(primitive.shift)
-        "gs_argstack_push(&#{what});                  // >>>"
+        "gs_argstack_push(#{what});"
       elsif type == :setres
-        "(*gs_stack_pointer).result = &#{self.compile_sexp(primitive.shift)};                         // ============"
+        "(*gs_stack_pointer).result = #{self.compile_sexp(primitive.shift)};                         // ============"
       elsif type == :getres
         "(*gs_stack_pointer).result"
       elsif type == :get_inner_res
-        "*(gs_stack_pointer+1)->result"
+        "(gs_stack_pointer+1)->result"
       elsif type == :nop
 
       elsif type == :kernel_dispatch
@@ -205,7 +209,21 @@ C
               [:if, 
                 [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
                 [:setres, [:lvar, :arg]],
-                [:nop]
+                [:if, 
+                  [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_assign"]],
+                  [:block,
+                    [:lvar_assign, [:lvar, :arg], [:poparg]],
+                    [:setres, [:lvar, :arg]],
+                  ],
+                  [:if, 
+                    [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_get"]],
+                    [:setres, [:lvar_get, [:lvar, :arg]]],
+                    [:block,
+                      [:call, :println, [:lit_str, "unknown kernel message:"]],
+                      [:call, :println, [:lvar, :called_func]]
+                    ]
+                  ]
+                ]
               ]
             ]
           ],
@@ -233,7 +251,7 @@ C
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end
       @level -= 1
-      log "=> #{val}", 3
+      #log "=> #{val}", 3
       val
     end
 

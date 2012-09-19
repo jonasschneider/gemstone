@@ -96,7 +96,8 @@ describe Gemstone do
       [:push],
       [:pusharg, [:lit_str, "Stackstring"]],
       [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch]
+      [:kernel_dispatch],
+      [:pop]
     ]
     out.should eq("Stackstring\n")
   end
@@ -114,7 +115,9 @@ describe Gemstone do
 
       [:pusharg, [:get_inner_res]],
       [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch]
+      [:kernel_dispatch],
+
+      [:pop]
     ]
     out.should eq("Stackstring\n")
   end
@@ -139,15 +142,21 @@ describe Gemstone do
 
   it "can compare strings" do
     out = compile_and_execute [:block, 
-        [:lvar_assign, :a, [:lit_str, "Hello world"]],
-        [:lvar_assign, :b, [:lit_str, "Hello world"]],
-        [:if, [:strings_equal, [:lvar_get, :a], [:lvar_get, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
+        [:assign, :a, [:lit_str, "Hello world"]],
+        [:assign, :b, [:lit_str, "Hello world"]],
+        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
     out.should eq("match\n")
 
     out = compile_and_execute [:block, 
-        [:lvar_assign, :a, [:lit_str, "Hello world"]],
-        [:lvar_assign, :b, [:lit_str, "Bye world"]],
-        [:if, [:strings_equal, [:lvar_get, :a], [:lvar_get, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
+        [:assign, :a, [:lit_str, "Hello world"]],
+        [:assign, :b, [:lit_str, "Bye world"]],
+        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
+    out.should eq("no match\n")
+
+    out = compile_and_execute [:block, 
+        [:assign, :a, [:lit_str, "Hello"]],
+        [:assign, :b, [:lit_str, "Bye world"]],
+        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
     out.should eq("no match\n")
   end
 
@@ -159,6 +168,19 @@ describe Gemstone do
   it "shows the type of a number" do
     out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "typeof"], [:lit_fixnum, 1337]]]]]
     out.should eq("fixnum\n")
+  end
+
+
+  it "has local variables" do
+    #out = compile_and_execute [:block, 
+    #    [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]]]
+    #out.should eq("ohasi\n")
+
+    out = compile_and_execute [:block, 
+        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
+        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]]]]]
+    out.should eq("ohai\n")
+
   end
 
 end
