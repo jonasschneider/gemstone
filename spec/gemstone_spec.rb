@@ -170,17 +170,11 @@ describe Gemstone do
     out.should eq("fixnum\n")
   end
 
-
   it "has local variables" do
-    #out = compile_and_execute [:block, 
-    #    [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]]]
-    #out.should eq("ohasi\n")
-
     out = compile_and_execute [:block, 
         [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
         [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]]]]]
     out.should eq("ohai\n")
-
   end
 
 end
