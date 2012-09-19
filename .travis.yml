@@ -1,0 +1,5 @@
+language: ruby
+before_script: gem install rspec
+script: rspec
+rvm:
+  - 1.9.3
