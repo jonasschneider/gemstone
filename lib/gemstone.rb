@@ -152,37 +152,7 @@ C
 
 
       elsif type == :send
-        def traverse(node)
-          node = node.dup
-          target = node.shift
-          steps = [:block]
-          raise 'can only send to kernel' if target != :kernel
-          message_parts = node.shift.reverse
-
-          steps << [:push, message_parts.inspect]
-
-          part_refs = message_parts.map do |part|
-            if part.first == :send
-              part.shift
-              @level += 1
-              r = traverse(part)
-
-              @level -= 1
-            else
-              log "compiling: #{part}"
-              r = self.compile_sexp(part)
-              
-            end
-
-            steps << r
-            steps << [:pusharg, [:get_inner_res]]
-          end
-
-          steps << [:kernel_dispatch]
-          
-          steps
-        end
-        res = traverse(primitive)
+        
 
 
         self.compile_sexp(res)
@@ -258,6 +228,47 @@ C
       @level -= 1
       log "=> #{val}", 3
       val
+    end
+
+    def unwind_send_stack(sexp)
+      def traverse(node)
+        node = node.dup
+        puts node.inspect
+        target = node.shift
+        steps = []
+        raise 'can only send to kernel' if target != :kernel
+        message_parts = node.shift.reverse
+
+        steps << [:push]
+
+        part_refs = message_parts.map do |part|
+          if part.first == :send
+            part.shift
+            @level += 1
+            steps.concat traverse(part)
+
+            @level -= 1
+            steps << [:pusharg, [:get_inner_res]]
+          else
+            #log "compiling: #{part}"
+            #r = self.compile_sexp(part)
+            steps << [:pusharg, part]
+
+          end
+
+        end
+
+        steps << [:kernel_dispatch]
+        steps << [:pop]
+        
+        steps
+      end
+      if sexp.shift == :send
+        res = traverse(sexp)
+      else
+        raise "can't transform non-send"
+      end
+
     end
   end
 end

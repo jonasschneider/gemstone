@@ -71,10 +71,24 @@ describe Gemstone do
     out.should eq("Stackstring\n")
   end
 
-  it "can transform send" do
-    pendin
-    r = Gemstone.transform_send [:send, :kernel, [[:dyn_str, "puts"], [:send, :kernel, [[:dyn_str, "returnstr"], [:dyn_str, "Stackstring"]]]]]
-    r.should == [:block]
+  it "can unwind_send_stack" do
+    r = Gemstone::Compiler.new.unwind_send_stack [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "returnstr"], [:lit_str, "Stackstring"]]]]]
+    r.should == [
+      [:push],
+      [:push],
+
+      [:pusharg, [:lit_str, "Stackstring"]],
+      [:pusharg, [:lit_str, "returnstr"]],
+      [:kernel_dispatch],
+
+      [:pop],
+
+      [:pusharg, [:get_inner_res]],
+      [:pusharg, [:lit_str, "puts"]],
+      [:kernel_dispatch],
+
+      [:pop]
+    ]
   end
 
   it "runs puts from stack" do
