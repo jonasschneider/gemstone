@@ -62,7 +62,7 @@ describe Gemstone do
   end
 
   it "can send messages to kernel" do
-    out = compile_and_execute [:send, :kernel, [[:dyn_str, "puts"], [:dyn_str, "Hello world"]]]
+    out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "Hello world"]]]
     out.should eq("Hello world\n")
   end
 
@@ -72,7 +72,7 @@ describe Gemstone do
   end
 
   it "can unwind_send_stack" do
-    r = Gemstone::Compiler.new.unwind_send_stack [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "returnstr"], [:lit_str, "Stackstring"]]]]]
+    r = Gemstone::Compiler.new.unwind_send_stack [:kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "returnstr"], [:lit_str, "Stackstring"]]]]]
     r.should == [
       [:push],
       [:push],

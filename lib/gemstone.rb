@@ -152,9 +152,7 @@ C
 
 
       elsif type == :send
-        
-
-
+        res = [:block].concat unwind_send_stack(primitive)
         self.compile_sexp(res)
 
       elsif type == :strings_equal
@@ -263,11 +261,8 @@ C
         
         steps
       end
-      if sexp.shift == :send
-        res = traverse(sexp)
-      else
-        raise "can't transform non-send"
-      end
+
+      res = traverse(sexp)
 
     end
   end
