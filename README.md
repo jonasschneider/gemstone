@@ -12,6 +12,7 @@ The specs show the complete development of the code, no code changes have been m
     $ tmp/a.out
     Hello world!
 
+The generated code can be found in `tmp/code.c`.
+
 ## License
-Copyright 2012 Jonas Schneider.
-Licensed under the MIT License.
+Unless otherwise noted: Copyright 2012 Jonas Schneider, dual-licensed under the GPLv3 and the MIT License.
