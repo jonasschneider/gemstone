@@ -207,6 +207,8 @@ C
         "gs_argstack_push(&#{what});                  // >>>"
       elsif type == :setres
         "(*gs_stack_pointer).result = &#{self.compile_sexp(primitive.shift)};                         // ============"
+      elsif type == :getres
+        "(*gs_stack_pointer).result"
       elsif type == :get_inner_res
         "*(gs_stack_pointer+1)->result"
       elsif type == :nop
@@ -230,8 +232,12 @@ C
               ]
             ]
           ],
-          
-          [:setres, [:lit_str, "last inner call did not provide a return value"]]
+
+          [:if,
+            [:primitive_equal, [:getres], 0],
+            [:setres, [:lit_str, "last inner call did not provide a return value"]],
+            [:nop]
+          ]
         ]
 
         self.compile_sexp(sexp)
