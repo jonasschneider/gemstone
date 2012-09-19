@@ -11,6 +11,10 @@ module Gemstone
 #include <stdio.h>
 #include "gemstone.h"
 
+void kernel_dispatch() {
+  #{compiler.compile_kernel_dispatcher}
+}
+
 int main() {
 
 gs_stack_init();
@@ -178,47 +182,7 @@ C
       elsif type == :nop
 
       elsif type == :kernel_dispatch
-        sexp = 
-        [:block, 
-          [:assign, :called_func, [:poparg]],
-          [:assign, :arg, [:poparg]],
-          
-          [:if, 
-            [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
-            [:call, :println, [:lvar, :arg]],
-            [:if, 
-              [:strings_equal, [:lvar, :called_func], [:lit_str, "typeof"]],
-              [:call, :typeof, [:lvar, :arg]],
-              [:if, 
-                [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
-                [:setres, [:lvar, :arg]],
-                [:if, 
-                  [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_assign"]],
-                  [:block,
-                    [:lvar_assign, [:lvar, :arg], [:poparg]],
-                    [:setres, [:lvar, :arg]],
-                  ],
-                  [:if, 
-                    [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_get"]],
-                    [:setres, [:lvar_get, [:lvar, :arg]]],
-                    [:block,
-                      [:call, :println, [:lit_str, "unknown kernel message:"]],
-                      [:call, :println, [:lvar, :called_func]]
-                    ]
-                  ]
-                ]
-              ]
-            ]
-          ],
-
-          [:if,
-            [:primitive_equal, [:getres], 0],
-            [:setres, [:lit_str, "last inner call did not provide a return value"]],
-            [:nop]
-          ]
-        ]
-
-        self.compile_sexp(sexp)
+        "kernel_dispatch();"
 
       elsif type == :dyn_str
         str = primitive.shift
@@ -269,6 +233,50 @@ C
       steps << [:pop]
       
       steps
+    end
+
+    def compile_kernel_dispatcher
+      sexp = 
+      [:block, 
+        [:assign, :called_func, [:poparg]],
+        [:assign, :arg, [:poparg]],
+        
+        [:if, 
+          [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
+          [:call, :println, [:lvar, :arg]],
+          [:if, 
+            [:strings_equal, [:lvar, :called_func], [:lit_str, "typeof"]],
+            [:call, :typeof, [:lvar, :arg]],
+            [:if, 
+              [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
+              [:setres, [:lvar, :arg]],
+              [:if, 
+                [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_assign"]],
+                [:block,
+                  [:lvar_assign, [:lvar, :arg], [:poparg]],
+                  [:setres, [:lvar, :arg]],
+                ],
+                [:if, 
+                  [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_get"]],
+                  [:setres, [:lvar_get, [:lvar, :arg]]],
+                  [:block,
+                    [:call, :println, [:lit_str, "unknown kernel message:"]],
+                    [:call, :println, [:lvar, :called_func]]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+
+        [:if,
+          [:primitive_equal, [:getres], 0],
+          [:setres, [:lit_str, "last inner call did not provide a return value"]],
+          [:nop]
+        ]
+      ]
+
+      self.compile_sexp(sexp)
     end
   end
 end
