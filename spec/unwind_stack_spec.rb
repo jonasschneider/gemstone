@@ -37,6 +37,8 @@ describe Gemstone::Transformations::UnwindStack do
       [:kernel_dispatch],
       [:pop],
       [:pusharg, [:get_inner_res]],
+
+      [:init_lscope],
       
       [:object_dispatch],
       

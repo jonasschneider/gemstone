@@ -189,7 +189,7 @@ describe Gemstone do
       ]
     out.should eq("hello from the second lambda\nhello from the first lambda\n")
   end
-  
+
   it "can reassign local variables" do
     out = compile_and_execute [:block, 
         [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "first value"]]],
@@ -255,7 +255,7 @@ describe Gemstone do
 
           [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
         ]
-      out.should eq("hello from the string message dispatcher\nouter val\n")
+      out.should eq("outer val\ninner val\nouter val\n")
 
     end
   end

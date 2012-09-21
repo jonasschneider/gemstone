@@ -8,7 +8,7 @@ module Gemstone
         message_parts = node.shift.reverse
 
         steps << [:push]
-
+        
         part_refs = message_parts.map do |part|
           steps.concat traverse(part)
         end
@@ -17,6 +17,7 @@ module Gemstone
           steps << [:kernel_dispatch]
         else
           steps.concat traverse(target)
+          steps << [:init_lscope]  # create a new local scope for non-kernel calls
           steps << [:object_dispatch]
         end
 

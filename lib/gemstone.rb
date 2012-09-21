@@ -203,6 +203,10 @@ C
       elsif type == :pop
         "gs_stack_pop();                         // <<<<<<<<<<<<"
 
+      elsif type == :init_lscope
+        "gs_lvars_init();                           // LSCOPE"
+
+
       elsif type == :poparg
         "gs_argstack_pop()"
       elsif type == :pusharg
