@@ -11,7 +11,9 @@ struct gs_value {
   const char *string;
   unsigned long fixnum;
 
-  void (*lambda_func)();
+  void (*lambda_func)(); // for lambdas
+
+  struct gs_value *dispatcher;
 };
 
 

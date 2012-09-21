@@ -23,5 +23,9 @@ module Gemstone
     def self.run_lambda(arg)
       [:call_lambda, arg]
     end
+
+    def self.set_message_dispatcher(arg)
+      [:object_set_message_dispatcher, arg, [:poparg]]
+    end
   end
 end

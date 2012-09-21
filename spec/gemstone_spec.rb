@@ -210,4 +210,37 @@ describe Gemstone do
       ]
     out.should eq("hello from the second lambda\nhello from the first lambda\n")
   end
+
+  context "sending messages to values" do
+    it "throws an error if no dispatcher is set" do
+      out = compile_and_execute [:block, 
+          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
+
+          [:send, 
+            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
+            [[:lit_str, "my message"]]
+          ]
+        ]
+      out.should eq("message sent to value without dispatcher\n")
+    end
+
+    it "a message dispatcher for a string can be set and gets called" do
+      out = compile_and_execute [:block, 
+          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
+
+          [:send, :kernel, [[:lit_str, "set_message_dispatcher"],
+            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
+            [:lambda,
+              [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the string message dispatcher"]]]
+            ]
+          ]],
+
+          [:send, 
+            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
+            [[:lit_str, "my message"]]
+          ]
+        ]
+      out.should eq("hello from the string message dispatcher\n")
+    end
+  end
 end

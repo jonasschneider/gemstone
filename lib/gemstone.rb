@@ -55,6 +55,11 @@ C
       @lambdas = []
       @decls = {}
       @level = 0
+      @uuid = 0
+    end
+
+    def uuid
+      @uuid += 1
     end
 
     def log(msg, additional_indent = 0)
@@ -215,16 +220,26 @@ C
 
       elsif type == :raw
         primitive.shift
-      elsif type == :dyn_str
-        str = primitive.shift
-        name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')[0,30]
 
-        [:block, [:assign_cvar, name, str], [:pusharg, [:lvar, name]]]
-      elsif type == :dyn_fixnum
-        num = primitive.shift
-        name = 'dyn_fixnum_'+num.to_s
+      elsif type == :object_set_message_dispatcher
+        name = 'object_set_message_dispatcher_'+uuid.to_s
+        x=<<C
+/* SET DISPATCHER */
+struct gs_value *#{name} = #{self.compile_sexp(primitive.shift)};
+#{name}->dispatcher = #{self.compile_sexp(primitive.shift)};
+C
+      elsif type == :object_dispatch
+        name = 'dispatch_'+uuid.to_s
+        x=<<C
+struct gs_value *#{name} = #{self.compile_sexp([:poparg])};
+if(#{name}->dispatcher) {
+  #{self.compile_sexp([:send, :kernel, [[:lit_str, "run_lambda"], [:raw, "#{name}->dispatcher"]]])}
+} else {
+  #{self.compile_sexp([:send, :kernel, [[:lit_str, "puts"], [:lit_str, "message sent to value without dispatcher"]]])}
+}
 
-        [:block, [:assign_cvar, name, num], [:pusharg, [:lvar, name]]]
+C
+
       else
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end
@@ -237,12 +252,12 @@ C
       node = node.dup
       target = node.shift
       steps = []
-      raise 'can only send to kernel' if target != :kernel
       message_parts = node.shift.reverse
 
       steps << [:push]
 
-      part_refs = message_parts.map do |part|
+      def unwind(part)
+        steps = []
         if part.first == :send
           # Nested call
           part.shift
@@ -258,10 +273,20 @@ C
           # Static call
           steps << [:pusharg, part]
         end
-
+        steps
       end
 
-      steps << [:kernel_dispatch]
+      part_refs = message_parts.map do |part|
+        steps.concat unwind(part)
+      end
+
+      if target == :kernel
+        steps << [:kernel_dispatch]
+      else
+        steps.concat unwind(target)
+        steps << [:object_dispatch]
+      end
+
       steps << [:pop]
       
       steps
