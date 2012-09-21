@@ -15,7 +15,7 @@ module Gemstone
 #include "gemstone.h"
 
 void kernel_dispatch() {
-  #{compiler.compile_kernel_dispatcher}
+  #{compiler.compile_sexp(Kernel.dispatcher_sexp)}
 }
 
 #{compiler.lambdas.join("\n")}
@@ -251,50 +251,6 @@ C
       @level -= 1
       #log "=> #{val}", 3
       val
-    end
-
-    def compile_kernel_dispatcher
-      def build(methods)
-        meth = methods.shift
-        invocation = Gemstone::Kernel.send(meth, [:lvar, :arg])
-
-        if methods.empty?
-          tail = [:block,
-            [:call, :println, [:lit_str, "unknown kernel message:"]],
-            [:call, :println, [:lvar, :called_func]]
-          ]
-        else
-          tail = build(methods)
-        end
-
-        [:if, 
-          [:strings_equal, [:lvar, :called_func], [:lit_str, meth.to_s]],
-          invocation,
-          tail
-        ]
-      end
-
-      tree = build(Gemstone::Kernel.singleton_methods)
-
-      sexp = 
-      [:block, 
-        [:assign, :called_func, [:poparg]],
-        [:assign, :arg, [:poparg]],
-
-        [:raw, 'LOG("running kernel call \'%s\'", called_func->string);'+"\n"],
-
-        tree,
-        
-        [:if,
-          [:primitive_equal, [:getres], 0],
-          [:setres, [:lit_str, "last kernel call did not provide a return value"]],
-          [:nop]
-        ],
-
-        [:raw, 'INFO("kernel dispatch complete");'+"\n"]
-      ]
-
-      self.compile_sexp(sexp)
     end
   end
 end

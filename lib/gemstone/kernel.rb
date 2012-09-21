@@ -1,31 +1,48 @@
+require 'gemstone/kernel/methods'
+
 module Gemstone
   module Kernel
-    def self.puts(arg)
-      [:call, :println, arg]
+    def self.dispatcher_sexp
+      tree = recurse(Gemstone::Kernel::Methods.singleton_methods)
+
+      sexp = 
+      [:block, 
+        [:assign, :called_func, [:poparg]],
+        [:assign, :arg, [:poparg]],
+
+        [:raw, 'LOG("running kernel call \'%s\'", called_func->string);'+"\n"],
+
+        tree,
+        
+        [:if,
+          [:primitive_equal, [:getres], 0],
+          [:setres, [:lit_str, "last kernel call did not provide a return value"]],
+          [:nop]
+        ],
+
+        [:raw, 'INFO("kernel dispatch complete");'+"\n"]
+      ]
     end
 
-    def self.typeof(arg)
-      [:call, :typeof, arg]
-    end
 
-    def self.returnstr(arg)
-      [:setres, arg]
-    end
+    def self.recurse(methods)
+      meth = methods.shift
+      invocation = Gemstone::Kernel::Methods.send(meth, [:lvar, :arg])
 
-    def self.lvar_assign(arg)
-      [:lvar_assign, arg, [:poparg]]
-    end
+      if methods.empty?
+        tail = [:block,
+          [:call, :println, [:lit_str, "unknown kernel message:"]],
+          [:call, :println, [:lvar, :called_func]]
+        ]
+      else
+        tail = recurse(methods)
+      end
 
-    def self.lvar_get(arg)
-      [:setres, [:lvar_get, arg]]
-    end
-
-    def self.run_lambda(arg)
-      [:call_lambda, arg]
-    end
-
-    def self.set_message_dispatcher(arg)
-      [:object_set_message_dispatcher, arg, [:poparg]]
+      [:if, 
+        [:strings_equal, [:lvar, :called_func], [:lit_str, meth.to_s]],
+        invocation,
+        tail
+      ]
     end
   end
 end
