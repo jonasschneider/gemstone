@@ -159,10 +159,61 @@ C
         a = self.compile_sexp([:getstring, primitive.shift])
         b = self.compile_sexp([:getstring, primitive.shift])
         "strcmp(#{a}, #{b})==0"
-      elsif type == :nopstr
-        str = primitive.shift
-        { setup: [:nop], reference: str }
       
+      elsif type == :lambda
+        procedure = self.compile_sexp(primitive.shift)
+        x =<<C
+
+
+struct gs_value *the_lambda = malloc(sizeof(the_lambda));
+memset(the_lambda, 0, sizeof(the_lambda));
+the_lambda->type = GS_TYPE_LAMBDA;
+
+if(setjmp(the_lambda->lambda_jmp_buf)==0)
+  goto after_lambda;
+
+INFO("inside lambda");
+
+#{procedure}
+
+LOG("jumping back from lambda. stack: %p ", gs_stack_pointer);
+struct gs_value *ret_jump = gs_argstack_pop();
+longjmp(ret_jump->lambda_jmp_buf, 1);
+
+after_lambda:
+INFO("at after_lambda:");
+gs_argstack_push(the_lambda);
+LOG("stack: %p ", gs_stack_pointer);
+LOG("the lambda is at %p", the_lambda);
+C
+        x      
+      elsif type == :jump_to_lambda
+        x =<<C
+
+LOG("stack: %p ", gs_stack_pointer);
+LOG("jumping to lambda at %p", arg);
+
+__asm__
+(
+    "jmp out;"
+    "out:;"
+    :
+    :
+);
+
+struct gs_value *ret_jump = malloc(sizeof(struct gs_value));
+memset(ret_jump, 0, sizeof(ret_jump));
+ret_jump->type = GS_TYPE_LAMBDA;
+
+gs_argstack_push(ret_jump);
+
+if(setjmp(ret_jump->lambda_jmp_buf)==0)
+  longjmp(arg->lambda_jmp_buf, 1);
+
+INFO("lambda call done");
+
+C
+        x
       elsif type == :push
         "gs_stack_push();                           // >>>>>>>>>>>> #{primitive.shift}"
       elsif type == :pop
@@ -184,6 +235,8 @@ C
       elsif type == :kernel_dispatch
         "kernel_dispatch();"
 
+      elsif type == :raw
+        primitive.shift
       elsif type == :dyn_str
         str = primitive.shift
         name = 'dyn_str_'+str.gsub(/[^a-zA-Z]/, '_')[0,30]
@@ -204,7 +257,6 @@ C
 
     def unwind_send_stack(node)
       node = node.dup
-      puts node.inspect
       target = node.shift
       steps = []
       raise 'can only send to kernel' if target != :kernel
@@ -222,6 +274,8 @@ C
           @level -= 1
 
           steps << [:pusharg, [:get_inner_res]]
+        elsif part.first == :lambda
+          steps << part
         else
           # Static call
           steps << [:pusharg, part]
@@ -240,6 +294,8 @@ C
       [:block, 
         [:assign, :called_func, [:poparg]],
         [:assign, :arg, [:poparg]],
+
+        [:raw, 'LOG("running kernel call \'%s\'", called_func->string);'+"\n"],
         
         [:if, 
           [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
@@ -259,9 +315,13 @@ C
                 [:if, 
                   [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_get"]],
                   [:setres, [:lvar_get, [:lvar, :arg]]],
-                  [:block,
-                    [:call, :println, [:lit_str, "unknown kernel message:"]],
-                    [:call, :println, [:lvar, :called_func]]
+                  [:if, 
+                    [:strings_equal, [:lvar, :called_func], [:lit_str, "run_lambda"]],
+                    [:jump_to_lambda, [:lvar, :arg]],
+                    [:block,
+                      [:call, :println, [:lit_str, "unknown kernel message:"]],
+                      [:call, :println, [:lvar, :called_func]]
+                    ]
                   ]
                 ]
               ]
@@ -273,7 +333,9 @@ C
           [:primitive_equal, [:getres], 0],
           [:setres, [:lit_str, "last inner call did not provide a return value"]],
           [:nop]
-        ]
+        ],
+
+        [:raw, 'INFO("kernel dispatch complete");'+"\n"]
       ]
 
       self.compile_sexp(sexp)

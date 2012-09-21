@@ -1,12 +1,17 @@
 #include <string.h>
 #include "hashtable.c"
-#define GS_TYPE_STRING 0
-#define GS_TYPE_FIXNUM 1
+#include "setjmp.h"
+
+#define GS_TYPE_STRING 1
+#define GS_TYPE_FIXNUM 2
+#define GS_TYPE_LAMBDA 3
 
 struct gs_value {
   int type;
   const char *string;
   unsigned long fixnum;
+
+  jmp_buf lambda_jmp_buf;
 };
 
 

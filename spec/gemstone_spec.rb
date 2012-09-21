@@ -177,4 +177,24 @@ describe Gemstone do
     out.should eq("ohai\n")
   end
 
+  it "has a lambda" do
+    lambda = 
+      [:lambda,
+        [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the lambda"]]]
+      ]
+    out = compile_and_execute [:block, 
+        [:send, :kernel, [[:lit_str, "run_lambda"], lambda]]
+      ]
+    out.should eq("hello from the lambda\n")
+
+    pending
+    out = compile_and_execute [:block, 
+        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mylambda"], [:lambda,
+          [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the lambda"]]]
+        ]]],
+        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mylambda"]]]]],
+        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mylambda"]]]]]
+      ]
+    out.should eq("hello from the lambda\n"*2)
+  end
 end
