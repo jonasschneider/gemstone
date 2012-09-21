@@ -208,6 +208,7 @@ describe Gemstone do
 
   context "sending messages to values" do
     it "throws an error if no dispatcher is set" do
+      pending
       out = compile_and_execute [:block, 
           [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
 
@@ -263,9 +264,9 @@ describe Gemstone do
     end
 
     it "can query a string for its length" do
-      pending
       out = compile_and_execute [:block, 
           [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "0123456789"]]],
+          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "longer"], [:lit_str, "01234567890123456789"]]],
 
           [:send, :kernel,
             [[:lit_str, "puts"],
@@ -273,10 +274,17 @@ describe Gemstone do
               [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
               [[:lit_str, "length"]]
             ]
+          ]],
+
+          [:send, :kernel,
+            [[:lit_str, "puts"],
+            [:send, 
+              [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "longer"]]],
+              [[:lit_str, "length"]]
+            ]
           ]]
         ]
-      out.should eq("outer val\ninner val\nouter val\n")
-
+      out.should eq("10\n20\n")
     end
   end
 end

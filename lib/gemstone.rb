@@ -10,6 +10,7 @@ module Gemstone
     c = main
 
     #code = 
+    getlen = compiler.compile_sexp [:lvar_assign, [:lit_str, "len"], [:lit_fixnum, [:raw, 'strlen(gs_stack_pointer->receiver->string)']]]
     wrapped = <<C
 #include <stdio.h>
 #include "gemstone.h"
@@ -17,6 +18,15 @@ module Gemstone
 void kernel_dispatch() {
   #{compiler.compile_sexp(Kernel.dispatcher_sexp)}
 }
+
+void string_dispatch() {
+  // discard the method name
+  #{compiler.compile_sexp [:poparg]};
+
+  #{getlen}
+  #{compiler.compile_sexp [:setres, [:lvar_get, [:lit_str, 'len']]]}
+}
+
 
 #{compiler.lambdas.join("\n")}
 
@@ -150,7 +160,7 @@ C
         "gs_string_literal(\"#{str}\", #{str.bytesize})"
       elsif type == :lit_fixnum
         fixnum = primitive.shift
-        raise 'need fixnum' unless Fixnum === fixnum
+        fixnum = self.compile_sexp(fixnum) unless Fixnum === fixnum
         "gs_fixnum_literal(#{fixnum})"
       elsif type == :c_const
         primitive.shift
@@ -246,9 +256,14 @@ C
         name = 'dispatch_'+uuid.to_s
         x=<<C
 struct gs_value *#{name} = #{self.compile_sexp([:poparg])};
+gs_stack_pointer->receiver = #{name};
+
 if(#{name}->dispatcher) {
   #{self.compile_sexp([:send, :kernel, [[:lit_str, "run_lambda"], [:raw, "#{name}->dispatcher"]]])}
 } else {
+  string_dispatch();
+}
+if(0) {
   #{self.compile_sexp([:send, :kernel, [[:lit_str, "puts"], [:lit_str, "message sent to value without dispatcher"]]])}
 }
 
