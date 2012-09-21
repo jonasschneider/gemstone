@@ -189,6 +189,18 @@ describe Gemstone do
       ]
     out.should eq("hello from the second lambda\nhello from the first lambda\n")
   end
+  
+  it "can reassign local variables" do
+    out = compile_and_execute [:block, 
+        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "first value"]]],
+        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]],
+
+        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "second value"]]],
+        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
+      ]
+    out.should eq("first value\nsecond value\n")
+  end
+
 
   context "sending messages to values" do
     it "throws an error if no dispatcher is set" do
@@ -220,6 +232,31 @@ describe Gemstone do
           ]
         ]
       out.should eq("hello from the string message dispatcher\n")
+    end
+
+    it "creates a new local scope for the dispatcher" do
+      out = compile_and_execute [:block, 
+          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "outer val"]]],
+          [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]],
+          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
+
+          [:send, :kernel, [[:lit_str, "set_message_dispatcher"],
+            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
+            [:lambda, [:block,
+              [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "inner val"]]],
+              [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
+            ]]
+          ]],
+
+          [:send, 
+            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
+            [[:lit_str, "my message"]]
+          ],
+
+          [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
+        ]
+      out.should eq("hello from the string message dispatcher\nouter val\n")
+
     end
   end
 end

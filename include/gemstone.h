@@ -62,6 +62,11 @@ void gs_lvars_init() {
 
 
 void gs_lvars_assign(const char *name, struct gs_value *val) {
+  struct gs_value *old_val = (struct gs_value *)hash_table_lookup((*gs_stack_pointer).lvars, (void*)name, strlen(name));
+  if(old_val != NULL) {
+    LOG("--L removing old value for %s, it was set to %p", name, old_val);
+    hash_table_remove((*gs_stack_pointer).lvars, (void*)name, strlen(name));
+  }
   LOG("--L adding %s set to %p", name, val);
   hash_table_add((*gs_stack_pointer).lvars, (void*)name, strlen(name), val, sizeof(&val));
 }
