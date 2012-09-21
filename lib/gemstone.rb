@@ -1,4 +1,5 @@
 require 'gemstone/kernel'
+require 'gemstone/transformations/unwind_stack'
 
 module Gemstone
   def self.compile(list_sexp, binary_path)
@@ -161,7 +162,7 @@ C
         "(#{self.compile_sexp(primitive.shift)})->string"
 
       elsif type == :send
-        res = [:block].concat unwind_send_stack(primitive)
+        res = [:block].concat Gemstone::Transformations::UnwindStack.apply(primitive)
         self.compile_sexp(res)
 
       elsif type == :strings_equal
@@ -246,50 +247,6 @@ C
       @level -= 1
       #log "=> #{val}", 3
       val
-    end
-
-    def unwind_send_stack(node)
-      node = node.dup
-      target = node.shift
-      steps = []
-      message_parts = node.shift.reverse
-
-      steps << [:push]
-
-      def unwind(part)
-        steps = []
-        if part.first == :send
-          # Nested call
-          part.shift
-
-          @level += 1
-          steps.concat unwind_send_stack(part)
-          @level -= 1
-
-          steps << [:pusharg, [:get_inner_res]]
-        elsif part.first == :lambda
-          steps << part
-        else
-          # Static call
-          steps << [:pusharg, part]
-        end
-        steps
-      end
-
-      part_refs = message_parts.map do |part|
-        steps.concat unwind(part)
-      end
-
-      if target == :kernel
-        steps << [:kernel_dispatch]
-      else
-        steps.concat unwind(target)
-        steps << [:object_dispatch]
-      end
-
-      steps << [:pop]
-      
-      steps
     end
 
     def compile_kernel_dispatcher

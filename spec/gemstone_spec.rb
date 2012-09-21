@@ -1,4 +1,3 @@
-require 'rspec'
 require 'gemstone'
 
 describe Gemstone do
@@ -69,26 +68,6 @@ describe Gemstone do
   it "can send nested messages to kernel" do
     out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "returnstr"], [:lit_str, "Stackstring"]]]]]
     out.should eq("Stackstring\n")
-  end
-
-  it "can unwind_send_stack" do
-    r = Gemstone::Compiler.new.unwind_send_stack [:kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "returnstr"], [:lit_str, "Stackstring"]]]]]
-    r.should == [
-      [:push],
-      [:push],
-
-      [:pusharg, [:lit_str, "Stackstring"]],
-      [:pusharg, [:lit_str, "returnstr"]],
-      [:kernel_dispatch],
-
-      [:pop],
-
-      [:pusharg, [:get_inner_res]],
-      [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch],
-
-      [:pop]
-    ]
   end
 
   it "runs puts from stack" do
