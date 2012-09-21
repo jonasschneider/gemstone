@@ -9,8 +9,6 @@ module Gemstone
 
     c = main
 
-    #code = 
-    getlen = compiler.compile_sexp [:lvar_assign, [:lit_str, "len"], [:lit_fixnum, [:raw, 'strlen(gs_stack_pointer->receiver->string)']]]
     wrapped = <<C
 #include <stdio.h>
 #include "gemstone.h"
@@ -23,8 +21,7 @@ void string_dispatch() {
   // discard the method name
   #{compiler.compile_sexp [:poparg]};
 
-  #{getlen}
-  #{compiler.compile_sexp [:setres, [:lvar_get, [:lit_str, 'len']]]}
+  #{compiler.compile_sexp [:setres, [:lit_fixnum, [:raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
 }
 
 
