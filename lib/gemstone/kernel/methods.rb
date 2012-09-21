@@ -46,6 +46,16 @@ module Gemstone
         ]
       end
 
+      def self.run_lambda_in_parent_frame
+        [:pb_block,
+          
+          [:ps_cvar_assign, "arg", [:pi_poparg]],
+          [:ps_pop],
+          [:ps_call_lambda, [:pi_cvar_get, 'arg']],
+          [:ps_push]
+        ]
+      end
+
       def self.set_message_dispatcher
         [:pb_block,
           [:ps_cvar_assign, "target", [:pi_poparg]],

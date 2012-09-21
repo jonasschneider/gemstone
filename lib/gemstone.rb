@@ -216,7 +216,7 @@ struct gs_value *#{name} = #{self.compile_sexp([:pi_poparg])};
 gs_stack_pointer->receiver = #{name};
 
 if(#{name}->dispatcher) {
-  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "#{name}->dispatcher"]]])}
+  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda_in_parent_frame"], [:_raw, "#{name}->dispatcher"]]])}
 } else {
   string_dispatch();
 }

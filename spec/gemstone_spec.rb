@@ -165,9 +165,12 @@ describe Gemstone do
 
           [:send, :kernel, [[:pi_lit_str, "set_message_dispatcher"],
             [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
-            [:ps_push_lambda,
-              [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "hello from the string message dispatcher"]]]
-            ]
+            [:ps_push_lambda, [:pb_block,
+              [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "hello from the string message dispatcher"]]],
+              [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "your message was:"]]],
+              [:ps_cvar_assign, "arg", [:pi_poparg]],
+              [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_cvar_get, 'arg']]]
+            ]]
           ]],
 
           [:_raw, 'INFO("dispatcher set, sending message to mystr");'],
@@ -177,7 +180,7 @@ describe Gemstone do
             [[:pi_lit_str, "my message"]]
           ]
         ]
-      out.should eq("hello from the string message dispatcher\n")
+      out.should eq("hello from the string message dispatcher\nyour message was:\nmy message\n")
     end
 
     it "creates a new local scope for the dispatcher" do
