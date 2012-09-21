@@ -196,4 +196,18 @@ describe Gemstone do
       ]
     out.should eq("hello from the lambda\n"*2)
   end
+
+  it "can have multiple lambdas" do
+    out = compile_and_execute [:block, 
+        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "lambda1"], [:lambda,
+          [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the first lambda"]]]
+        ]]],
+        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "lambda2"], [:lambda,
+          [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the second lambda"]]]
+        ]]],
+        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "lambda2"]]]]],
+        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "lambda1"]]]]]
+      ]
+    out.should eq("hello from the second lambda\nhello from the first lambda\n")
+  end
 end

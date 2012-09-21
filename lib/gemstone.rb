@@ -163,10 +163,13 @@ C
         "strcmp(#{a}, #{b})==0"
       
       elsif type == :lambda
+        name = "my_lambda_#{@lambdas.length}"
+        funcname = name + '_func'
+        valname = name + '_val'
         procedure = self.compile_sexp(primitive.shift)
         func = <<C
 
-void mylambda(void) {
+void #{funcname}(void) {
   INFO("inside lambda");
 
   #{procedure}
@@ -175,37 +178,18 @@ void mylambda(void) {
 }
 C
         x =<<C
-struct gs_value *the_lambda = malloc(sizeof(*the_lambda));
-LOG("allocated lambda at  %llx", the_lambda);
+struct gs_value *#{valname} = malloc(sizeof(struct gs_value));
+memset(#{valname}, 0, sizeof(struct gs_value));
+#{valname}->type = GS_TYPE_LAMBDA;
 
+#{valname}->lambda_func = &#{funcname};
 
-memset(the_lambda, 0, sizeof(the_lambda));
-the_lambda->type = GS_TYPE_LAMBDA;
-
-the_lambda->lambda_func = &mylambda;
-
-LOG("stack: %p ", gs_stack_pointer);
-LOG("set lambda pointer to %llx", the_lambda->lambda_func );
-LOG("while mylambda is at: %llx", mylambda);
-gs_argstack_push(the_lambda);
+gs_argstack_push(#{valname});
 C
         @lambdas << func
         x      
-      elsif type == :jump_to_lambda
-        x =<<C
-
-LOG("stack: %p ", gs_stack_pointer);
-LOG("jumping to lambda at %p", arg);
-LOG("lambda gs_value type: %u", arg->type);
-
-LOG("lambda pointer: %llx", arg->lambda_func );
-
-arg->lambda_func();
-
-INFO("lambda call done");
-
-C
-        x
+      elsif type == :call_lambda
+        "arg->lambda_func();"
       elsif type == :push
         "gs_stack_push();                           // >>>>>>>>>>>> #{primitive.shift}"
       elsif type == :pop
@@ -311,7 +295,7 @@ C
                   [:setres, [:lvar_get, [:lvar, :arg]]],
                   [:if, 
                     [:strings_equal, [:lvar, :called_func], [:lit_str, "run_lambda"]],
-                    [:jump_to_lambda, [:lvar, :arg]],
+                    [:call_lambda, [:lvar, :arg]],
                     [:block,
                       [:call, :println, [:lit_str, "unknown kernel message:"]],
                       [:call, :println, [:lvar, :called_func]]
