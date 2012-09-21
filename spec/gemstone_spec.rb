@@ -187,7 +187,6 @@ describe Gemstone do
       ]
     out.should eq("hello from the lambda\n")
 
-    pending
     out = compile_and_execute [:block, 
         [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mylambda"], [:lambda,
           [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the lambda"]]]

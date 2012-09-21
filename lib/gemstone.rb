@@ -11,6 +11,8 @@ module Gemstone
 #include <stdio.h>
 #include "gemstone.h"
 
+#{compiler.lambdas.join("\n")}
+
 void kernel_dispatch() {
   #{compiler.compile_kernel_dispatcher}
 }
@@ -46,9 +48,9 @@ C
   end
 
   class Compiler
-    attr_reader :literals
+    attr_reader :lambdas
     def initialize
-      @literals = []
+      @lambdas = []
       @decls = {}
       @level = 0
     end
@@ -162,53 +164,43 @@ C
       
       elsif type == :lambda
         procedure = self.compile_sexp(primitive.shift)
+        func = <<C
+
+void mylambda(void) {
+  INFO("inside lambda");
+
+  #{procedure}
+
+  INFO("lambda done");
+}
+C
         x =<<C
+struct gs_value *the_lambda = malloc(sizeof(*the_lambda));
+LOG("allocated lambda at  %llx", the_lambda);
 
 
-struct gs_value *the_lambda = malloc(sizeof(the_lambda));
 memset(the_lambda, 0, sizeof(the_lambda));
 the_lambda->type = GS_TYPE_LAMBDA;
 
-if(setjmp(the_lambda->lambda_jmp_buf)==0)
-  goto after_lambda;
+the_lambda->lambda_func = &mylambda;
 
-INFO("inside lambda");
-
-#{procedure}
-
-LOG("jumping back from lambda. stack: %p ", gs_stack_pointer);
-struct gs_value *ret_jump = gs_argstack_pop();
-longjmp(ret_jump->lambda_jmp_buf, 1);
-
-after_lambda:
-INFO("at after_lambda:");
-gs_argstack_push(the_lambda);
 LOG("stack: %p ", gs_stack_pointer);
-LOG("the lambda is at %p", the_lambda);
+LOG("set lambda pointer to %llx", the_lambda->lambda_func );
+LOG("while mylambda is at: %llx", mylambda);
+gs_argstack_push(the_lambda);
 C
+        @lambdas << func
         x      
       elsif type == :jump_to_lambda
         x =<<C
 
 LOG("stack: %p ", gs_stack_pointer);
 LOG("jumping to lambda at %p", arg);
+LOG("lambda gs_value type: %u", arg->type);
 
-__asm__
-(
-    "jmp out;"
-    "out:;"
-    :
-    :
-);
+LOG("lambda pointer: %llx", arg->lambda_func );
 
-struct gs_value *ret_jump = malloc(sizeof(struct gs_value));
-memset(ret_jump, 0, sizeof(ret_jump));
-ret_jump->type = GS_TYPE_LAMBDA;
-
-gs_argstack_push(ret_jump);
-
-if(setjmp(ret_jump->lambda_jmp_buf)==0)
-  longjmp(arg->lambda_jmp_buf, 1);
+arg->lambda_func();
 
 INFO("lambda call done");
 
@@ -294,6 +286,8 @@ C
       [:block, 
         [:assign, :called_func, [:poparg]],
         [:assign, :arg, [:poparg]],
+
+        [:raw, 'LOG("popd arg: %p", arg);'+"\n"],
 
         [:raw, 'LOG("running kernel call \'%s\'", called_func->string);'+"\n"],
         

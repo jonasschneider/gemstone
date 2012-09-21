@@ -11,7 +11,7 @@ struct gs_value {
   const char *string;
   unsigned long fixnum;
 
-  jmp_buf lambda_jmp_buf;
+  void (*lambda_func)();
 };
 
 
