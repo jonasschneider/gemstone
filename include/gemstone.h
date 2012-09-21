@@ -9,7 +9,7 @@
 struct gs_value {
   int type;
   const char *string;
-  unsigned long fixnum;
+  unsigned long long fixnum;
 
   void (*lambda_func)(); // for lambdas
 

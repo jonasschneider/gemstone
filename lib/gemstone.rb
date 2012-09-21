@@ -90,10 +90,16 @@ C
           arg = primitive.shift
           self.compile_sexp([:if, 
               [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_STRING"]], 
-              [:call, :printf, arg],
-              [:call, :printf, [:lit_str, "Runtime error, expected string"]] 
+              [:call, :print_string, arg],
+              [:if, 
+                [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_FIXNUM"]], 
+                [:call, :print_fixnum, arg],
+                [:call, :print_string, [:lit_str, "Runtime error, expected string or fixnum"]]
+              ]
           ])
-        elsif func == :printf
+        elsif func == :print_fixnum
+          "printf(\"%lld\\n\", #{self.compile_sexp([:getnum, primitive.shift])});\n"
+        elsif func == :print_string
           "printf(\"%s\", #{self.compile_sexp([:getstring, primitive.shift])});printf(\"\\n\");\n"
         elsif func == :typeof_internal
           arg = self.compile_sexp(primitive.shift)
@@ -161,6 +167,9 @@ C
       elsif type == :getstring
         "(#{self.compile_sexp(primitive.shift)})->string"
 
+      elsif type == :getnum
+        "(#{self.compile_sexp(primitive.shift)})->fixnum"
+      
       elsif type == :send
         res = [:block].concat Gemstone::Transformations::UnwindStack.apply(primitive)
         self.compile_sexp(res)

@@ -39,11 +39,6 @@ describe Gemstone do
     out.should eq("Hello world\n")
   end
 
-  it 'fails when trying to printf a number' do
-    out = compile_and_execute [:block, [:assign, :num, [:lit_fixnum, 1337]], [:call, :println, [:lvar, :num]]]
-    out.should eq("Runtime error, expected string\n")
-  end
-
   it "has a working if statement" do
     out = compile_and_execute [:if, 1, [:call, :println, [:lit_str, "true"]], [:call, :println, [:lit_str, "false"]]]
     out.should eq("true\n")
@@ -201,6 +196,15 @@ describe Gemstone do
     out.should eq("first value\nsecond value\n")
   end
 
+  it "can puts a fixnum" do
+    out = compile_and_execute [:block, 
+        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mynum"], [:lit_fixnum, 1337]]],
+        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mynum"]]]]]
+      ]
+
+    out.should eq("1337\n")
+  end
+
 
   context "sending messages to values" do
     it "throws an error if no dispatcher is set" do
@@ -254,6 +258,22 @@ describe Gemstone do
           ],
 
           [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
+        ]
+      out.should eq("outer val\ninner val\nouter val\n")
+    end
+
+    it "can query a string for its length" do
+      pending
+      out = compile_and_execute [:block, 
+          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "0123456789"]]],
+
+          [:send, :kernel,
+            [[:lit_str, "puts"],
+            [:send, 
+              [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
+              [[:lit_str, "length"]]
+            ]
+          ]]
         ]
       out.should eq("outer val\ninner val\nouter val\n")
 
