@@ -14,273 +14,214 @@ describe Gemstone do
     o
   end
 
-  it 'compiles a hello world' do
-    out = compile_and_execute [:call, :println, [:lit_str, "Hello world"]]
-    out.should eq("Hello world\n")
-  end
-
-  it 'compiles a hello world with another string' do
-    out = compile_and_execute [:call, :println, [:lit_str, "Hello my dear"]]
-    out.should eq("Hello my dear\n")
-  end
-
-  it 'compiles a hello world in a block' do
-    out = compile_and_execute [:block, [:call, :println, [:lit_str, "Hello my dear"]]]
-    out.should eq("Hello my dear\n")
-  end
-
-  it 'compiles two hello worlds' do
-    out = compile_and_execute [:block, [:call, :println, [:lit_str, "Hello my dear"]], [:call, :println, [:lit_str, "Bye now!"]]]
-    out.should eq("Hello my dear\nBye now!\n")
-  end
-
-  it 'compiles a string assignment' do
-    out = compile_and_execute [:block, [:assign, :string, [:lit_str, "Hello world"]], [:call, :println, [:lvar, :string]]]
-    out.should eq("Hello world\n")
-  end
-
-  it "has a working if statement" do
-    out = compile_and_execute [:if, 1, [:call, :println, [:lit_str, "true"]], [:call, :println, [:lit_str, "false"]]]
-    out.should eq("true\n")
-
-    out = compile_and_execute [:if, 0, [:call, :println, [:lit_str, "true"]], [:call, :println, [:lit_str, "false"]]]
-    out.should eq("false\n")
-  end
-
-  it "can check for primitive equality" do
-    out = compile_and_execute [:if, [:primitive_equal, 1, 1], [:call, :println, [:lit_str, "true"]], [:call, :println, [:lit_str, "false"]]]
-    out.should eq("true\n")
-
-    out = compile_and_execute [:if, [:primitive_equal, 0, 1], [:call, :println, [:lit_str, "true"]], [:call, :println, [:lit_str, "false"]]]
-    out.should eq("false\n")
-  end
-
   it "can send messages to kernel" do
-    out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "Hello world"]]]
+    out = compile_and_execute [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "Hello world"]]]
     out.should eq("Hello world\n")
   end
 
   it "can send nested messages to kernel" do
-    out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "returnstr"], [:lit_str, "Stackstring"]]]]]
+    out = compile_and_execute [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "identity"], [:pi_lit_str, "Stackstring"]]]]]
     out.should eq("Stackstring\n")
-  end
-
-  it "runs puts from stack" do
-    out = compile_and_execute [:block,
-      [:push],
-      [:pusharg, [:lit_str, "Stackstring"]],
-      [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch],
-      [:pop]
-    ]
-    out.should eq("Stackstring\n")
-  end
-
-  it "runs puts from stack with argument from deeper within" do
-    out = compile_and_execute [:block,
-      [:push],
-      [:push],
-
-      [:pusharg, [:lit_str, "Stackstring"]],
-      [:pusharg, [:lit_str, "returnstr"]],
-      [:kernel_dispatch],
-
-      [:pop],
-
-      [:pusharg, [:get_inner_res]],
-      [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch],
-
-      [:pop]
-    ]
-    out.should eq("Stackstring\n")
-  end
-
-  it "sets a default message when the dispatched action does not set a return value" do
-    out = compile_and_execute [:block,
-      [:push],
-      [:push],
-
-      [:pusharg, [:lit_str, "some string"]],
-      [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch],
-
-      [:pop],
-
-      [:pusharg, [:get_inner_res]],
-      [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch]
-    ]
-    out.should eq("some string\nlast kernel call did not provide a return value\n")
-  end
-
-  it "can compare strings" do
-    out = compile_and_execute [:block, 
-        [:assign, :a, [:lit_str, "Hello world"]],
-        [:assign, :b, [:lit_str, "Hello world"]],
-        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
-    out.should eq("match\n")
-
-    out = compile_and_execute [:block, 
-        [:assign, :a, [:lit_str, "Hello world"]],
-        [:assign, :b, [:lit_str, "Bye world"]],
-        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
-    out.should eq("no match\n")
-
-    out = compile_and_execute [:block, 
-        [:assign, :a, [:lit_str, "Hello"]],
-        [:assign, :b, [:lit_str, "Bye world"]],
-        [:if, [:strings_equal, [:lvar, :a], [:lvar, :b]], [:call, :println, [:lit_str, "match"]], [:call, :println, [:lit_str, "no match"]]]]
-    out.should eq("no match\n")
   end
 
   it "shows the type of a string" do
-    out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "typeof"], [:lit_str, "Stackstring"]]]]]
+    out = compile_and_execute [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "typeof"], [:pi_lit_str, "Stackstring"]]]]]
     out.should eq("string\n")
   end
 
   it "shows the type of a number" do
-    out = compile_and_execute [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "typeof"], [:lit_fixnum, 1337]]]]]
+    out = compile_and_execute [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "typeof"], [:pi_lit_fixnum, 1337]]]]]
     out.should eq("fixnum\n")
   end
 
-  it "has local variables" do
-    out = compile_and_execute [:block, 
-        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
-        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]]]]]
-    out.should eq("ohai\n")
-  end
-
-  it "has a lambda" do
-    lambda = 
-      [:lambda,
-        [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the lambda"]]]
-      ]
-    out = compile_and_execute [:block, 
-        [:send, :kernel, [[:lit_str, "run_lambda"], lambda]]
-      ]
-    out.should eq("hello from the lambda\n")
-
-    out = compile_and_execute [:block, 
-        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mylambda"], [:lambda,
-          [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the lambda"]]]
-        ]]],
-        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mylambda"]]]]],
-        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mylambda"]]]]]
-      ]
-    out.should eq("hello from the lambda\n"*2)
-  end
-
-  it "can have multiple lambdas" do
-    out = compile_and_execute [:block, 
-        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "lambda1"], [:lambda,
-          [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the first lambda"]]]
-        ]]],
-        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "lambda2"], [:lambda,
-          [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the second lambda"]]]
-        ]]],
-        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "lambda2"]]]]],
-        [:send, :kernel, [[:lit_str, "run_lambda"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "lambda1"]]]]]
-      ]
-    out.should eq("hello from the second lambda\nhello from the first lambda\n")
-  end
-
-  it "can reassign local variables" do
-    out = compile_and_execute [:block, 
-        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "first value"]]],
-        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]],
-
-        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "second value"]]],
-        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
-      ]
-    out.should eq("first value\nsecond value\n")
+  it "runs puts from stack" do
+    out = compile_and_execute [:pb_block,
+      [:ps_push],
+      [:ps_pusharg, [:pi_lit_str, "Stackstring"]],
+      [:ps_pusharg, [:pi_lit_str, "puts"]],
+      [:ps_kernel_dispatch],
+      [:ps_pop]
+    ]
+    out.should eq("Stackstring\n")
   end
 
   it "can puts a fixnum" do
-    out = compile_and_execute [:block, 
-        [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mynum"], [:lit_fixnum, 1337]]],
-        [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mynum"]]]]]
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mynum"], [:pi_lit_fixnum, 1337]]],
+        [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mynum"]]]]]
       ]
 
     out.should eq("1337\n")
   end
 
+  it "runs puts from stack with argument from deeper within" do
+    out = compile_and_execute [:pb_block,
+      [:ps_push],
+      [:ps_push],
+
+      [:ps_pusharg, [:pi_lit_str, "Stackstring"]],
+      [:ps_pusharg, [:pi_lit_str, "identity"]],
+      [:ps_kernel_dispatch],
+
+      [:ps_pop],
+
+      [:ps_pusharg, [:pi_get_inner_res]],
+      [:ps_pusharg, [:pi_lit_str, "puts"]],
+      [:ps_kernel_dispatch],
+
+      [:ps_pop]
+    ]
+    out.should eq("Stackstring\n")
+  end
+
+  it "has local variables" do
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "ohai"]]],
+        [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]]]]]
+    out.should eq("ohai\n")
+  end
+
+  it "can reassign local variables" do
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "checker"], [:pi_lit_str, "first value"]]],
+        [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "checker"]]]]],
+
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "checker"], [:pi_lit_str, "second value"]]],
+        [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "checker"]]]]]
+      ]
+    out.should eq("first value\nsecond value\n")
+  end
+
+  it "sets a default message when the dispatched action does not set a return value" do
+    out = compile_and_execute [:pb_block,
+      [:ps_push],
+      [:ps_push],
+
+      [:ps_pusharg, [:pi_lit_str, "some string"]],
+      [:ps_pusharg, [:pi_lit_str, "puts"]],
+      [:ps_kernel_dispatch],
+
+      [:ps_pop],
+
+      [:ps_pusharg, [:pi_get_inner_res]],
+      [:ps_pusharg, [:pi_lit_str, "puts"]],
+      [:ps_kernel_dispatch]
+    ]
+    out.should eq("some string\nlast kernel call did not provide a return value\n")
+  end
+
+
+  it "has a lambda" do
+    lambda = 
+      [:ps_push_lambda,
+        [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "hello from the lambda"]]]
+      ]
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "run_lambda"], lambda]]
+      ]
+    out.should eq("hello from the lambda\n")
+
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mylambda"], [:ps_push_lambda,
+          [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "hello from the lambda"]]]
+        ]]],
+        [:send, :kernel, [[:pi_lit_str, "run_lambda"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mylambda"]]]]],
+        [:send, :kernel, [[:pi_lit_str, "run_lambda"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mylambda"]]]]]
+      ]
+    out.should eq("hello from the lambda\n"*2)
+  end
+
+  it "can have multiple lambdas" do
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "lambda1"], [:ps_push_lambda,
+          [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "hello from the first lambda"]]]
+        ]]],
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "lambda2"], [:ps_push_lambda,
+          [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "hello from the second lambda"]]]
+        ]]],
+        [:send, :kernel, [[:pi_lit_str, "run_lambda"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "lambda2"]]]]],
+        [:send, :kernel, [[:pi_lit_str, "run_lambda"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "lambda1"]]]]]
+      ]
+    out.should eq("hello from the second lambda\nhello from the first lambda\n")
+  end
 
   context "sending messages to values" do
     it "throws an error if no dispatcher is set" do
       pending
-      out = compile_and_execute [:block, 
-          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
+      out = compile_and_execute [:pb_block, 
+          [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "ohai"]]],
 
           [:send, 
-            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
-            [[:lit_str, "my message"]]
+            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+            [[:pi_lit_str, "my message"]]
           ]
         ]
       out.should eq("message sent to value without dispatcher\n")
     end
 
     it "a message dispatcher for a string can be set and gets called" do
-      out = compile_and_execute [:block, 
-          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
+      out = compile_and_execute [:pb_block, 
+          [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "ohai"]]],
 
-          [:send, :kernel, [[:lit_str, "set_message_dispatcher"],
-            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
-            [:lambda,
-              [:send, :kernel, [[:lit_str, "puts"], [:lit_str, "hello from the string message dispatcher"]]]
+          [:send, :kernel, [[:pi_lit_str, "set_message_dispatcher"],
+            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+            [:ps_push_lambda,
+              [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "hello from the string message dispatcher"]]]
             ]
           ]],
 
+          [:_raw, 'INFO("dispatcher set, sending message to mystr");'],
+
           [:send, 
-            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
-            [[:lit_str, "my message"]]
+            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+            [[:pi_lit_str, "my message"]]
           ]
         ]
       out.should eq("hello from the string message dispatcher\n")
     end
 
     it "creates a new local scope for the dispatcher" do
-      out = compile_and_execute [:block, 
-          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "outer val"]]],
-          [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]],
-          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "ohai"]]],
+      out = compile_and_execute [:pb_block, 
+          [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "checker"], [:pi_lit_str, "outer val"]]],
+          [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "checker"]]]]],
+          [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "ohai"]]],
 
-          [:send, :kernel, [[:lit_str, "set_message_dispatcher"],
-            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
-            [:lambda, [:block,
-              [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "checker"], [:lit_str, "inner val"]]],
-              [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
+          [:send, :kernel, [[:pi_lit_str, "set_message_dispatcher"],
+            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+            [:ps_push_lambda, [:pb_block,
+              [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "checker"], [:pi_lit_str, "inner val"]]],
+              [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "checker"]]]]]
             ]]
           ]],
 
           [:send, 
-            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
-            [[:lit_str, "my message"]]
+            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+            [[:pi_lit_str, "my message"]]
           ],
 
-          [:send, :kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "checker"]]]]]
+          [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "checker"]]]]]
         ]
       out.should eq("outer val\ninner val\nouter val\n")
     end
 
     it "can query a string for its length" do
-      out = compile_and_execute [:block, 
-          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "mystr"], [:lit_str, "0123456789"]]],
-          [:send, :kernel, [[:lit_str, "lvar_assign"], [:lit_str, "longer"], [:lit_str, "01234567890123456789"]]],
+      out = compile_and_execute [:pb_block, 
+          [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "0123456789"]]],
+          [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "longer"], [:pi_lit_str, "01234567890123456789"]]],
 
           [:send, :kernel,
-            [[:lit_str, "puts"],
+            [[:pi_lit_str, "puts"],
             [:send, 
-              [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
-              [[:lit_str, "length"]]
+              [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+              [[:pi_lit_str, "length"]]
             ]
           ]],
 
           [:send, :kernel,
-            [[:lit_str, "puts"],
+            [[:pi_lit_str, "puts"],
             [:send, 
-              [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "longer"]]],
-              [[:lit_str, "length"]]
+              [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "longer"]]],
+              [[:pi_lit_str, "length"]]
             ]
           ]]
         ]

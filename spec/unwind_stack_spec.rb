@@ -2,47 +2,47 @@ require 'gemstone'
 
 describe Gemstone::Transformations::UnwindStack do
   it "can unwind nested kernel calls" do
-    r = described_class.apply [:kernel, [[:lit_str, "puts"], [:send, :kernel, [[:lit_str, "returnstr"], [:lit_str, "Stackstring"]]]]]
+    r = described_class.apply [:kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "returnstr"], [:pi_lit_str, "Stackstring"]]]]]
     r.should == [
-      [:push],
-      [:push],
+      [:ps_push],
+      [:ps_push],
 
-      [:pusharg, [:lit_str, "Stackstring"]],
-      [:pusharg, [:lit_str, "returnstr"]],
-      [:kernel_dispatch],
+      [:ps_pusharg, [:pi_lit_str, "Stackstring"]],
+      [:ps_pusharg, [:pi_lit_str, "returnstr"]],
+      [:ps_kernel_dispatch],
 
-      [:pop],
+      [:ps_pop],
 
-      [:pusharg, [:get_inner_res]],
-      [:pusharg, [:lit_str, "puts"]],
-      [:kernel_dispatch],
+      [:ps_pusharg, [:pi_get_inner_res]],
+      [:ps_pusharg, [:pi_lit_str, "puts"]],
+      [:ps_kernel_dispatch],
 
-      [:pop]
+      [:ps_pop]
     ]
   end
 
   it "can unwind a :send to an object" do
     r = described_class.apply [
-            [:send, :kernel, [[:lit_str, "lvar_get"], [:lit_str, "mystr"]]],
-            [[:lit_str, "my message"]]
+            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+            [[:pi_lit_str, "my message"]]
           ]
     r.should == [
-      [:push],
+      [:ps_push],
 
-      [:pusharg, [:lit_str, "my message"]],
+      [:ps_pusharg, [:pi_lit_str, "my message"]],
 
-      [:push],
-      [:pusharg, [:lit_str, "mystr"]],
-      [:pusharg, [:lit_str, "lvar_get"]],
-      [:kernel_dispatch],
-      [:pop],
-      [:pusharg, [:get_inner_res]],
+      [:ps_push],
+      [:ps_pusharg, [:pi_lit_str, "mystr"]],
+      [:ps_pusharg, [:pi_lit_str, "lvar_get"]],
+      [:ps_kernel_dispatch],
+      [:ps_pop],
+      [:ps_pusharg, [:pi_get_inner_res]],
 
-      [:init_lscope],
+      [:ps_init_lscope],
       
-      [:object_dispatch],
+      [:ps_object_dispatch],
       
-      [:pop]
+      [:ps_pop]
     ]
   end
 end

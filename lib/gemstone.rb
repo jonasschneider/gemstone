@@ -19,9 +19,9 @@ void kernel_dispatch() {
 
 void string_dispatch() {
   // discard the method name
-  #{compiler.compile_sexp [:poparg]};
+  #{compiler.compile_sexp [:pi_poparg]};
 
-  #{compiler.compile_sexp [:setres, [:lit_fixnum, [:raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
+  #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
 }
 
 
@@ -91,102 +91,88 @@ C
 
       type = primitive.shift
 
-      val = if type == :call
-        func = primitive.shift
-        if func == :println
-          arg = primitive.shift
-          self.compile_sexp([:if, 
-              [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_STRING"]], 
-              [:call, :print_string, arg],
-              [:if, 
-                [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_FIXNUM"]], 
-                [:call, :print_fixnum, arg],
-                [:call, :print_string, [:lit_str, "Runtime error, expected string or fixnum"]]
-              ]
-          ])
-        elsif func == :print_fixnum
-          "printf(\"%lld\\n\", #{self.compile_sexp([:getnum, primitive.shift])});\n"
-        elsif func == :print_string
-          "printf(\"%s\", #{self.compile_sexp([:getstring, primitive.shift])});printf(\"\\n\");\n"
-        elsif func == :typeof_internal
-          arg = self.compile_sexp(primitive.shift)
-          "gemstone_typeof(#{arg})"
-        elsif func == :typeof
-          arg = primitive.shift
-          #{}"(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
-           # "(gemstone_typeof(#{arg}) == GS_TYPE_FIXNUM ? \"fixnum\" : \"\")" +  ")"
-          self.compile_sexp([:if, 
-              [:primitive_equal, [:call, :typeof_internal, arg], [:c_const, "GS_TYPE_STRING"]], 
-              [:setres, [:lit_str, "string"]],
-              [:setres, [:lit_str, "fixnum"]]
-          ])
-        else
-          raise "unknown call: #{func} - #{primitive.inspect}"
-        end
-      elsif type == :block
-        primitive.map do |statement|
-          self.compile_sexp(statement)
-        end.join("\n")
-      elsif type == :assign
+      ### There are three types of primitives:
+      # 1. Primitive setters - They are C statements and do something, not modifying the argstack.
+      # 2. Primitive getters - They are C statements and push something on the argstack.
+      # 3. Primitive blocks - They are C statements, do not modify the argstack and can contain non-primitive nodes. 
+      # 3. Primitive inlines - They are C expressions which evaluate to gs_value struct pointers, potentially modifying the argstack.
+      #
+      # Primitive getters and setters together form the group of primitive statements.
+      # 
+      # The primitive setters and getters are named by the effect they have on the environment - primitives that
+      # query the environment and provide information flow into the program are getters, primitives that change
+      # the environment and provide information flow out of the program are setters.
+      # 
+      # Primitive node types are prefixed with `p{s,g,i}_` respectively.
+      #
+      # Within the syntax tree, non-primitive nodes can only be nested under other non-primitive nodes and primitive blocks.
+      # Primitive nodes, however, can generally be nested under any node.
+      # This means i.e. that you cannot use the result of :send, a non-primitive, as the argument to a primitive.
+      #
+      # An even stricter rule is that all descendants of primitive statements must be primitive inlines;
+      # This rule stems naturally from the fact that primitive statements may not be nested and may not contain
+      # non-primitive nodes.
+
+      # In the course of compiling, the syntax tree is transformed in order to replace all non-primitive nodes 
+      # by a series of equivalent primitives.
+      # The resulting pure tree of primitives is then transformed into the output C code.
+
+
+      val = 
+      #
+      # PRIMITIVE STATEMENTS
+      #
+      if type == :ps_print
+        arg = primitive.shift
+        self.compile_sexp([:pb_if, 
+            [:pi_c_equal, [:pi_typeof, arg], [:pi_c_const, "GS_TYPE_STRING"]], 
+            [:ps_print_string, arg],
+            [:pb_if, 
+              [:pi_c_equal, [:pi_typeof, arg], [:pi_c_const, "GS_TYPE_FIXNUM"]], 
+              [:ps_print_fixnum, arg],
+              [:ps_print_string, [:pi_lit_str, "Runtime error, expected string or fixnum"]]
+            ]
+        ])
+      
+      elsif type == :ps_print_fixnum
+        "printf(\"%lld\\n\", #{self.compile_sexp([:pi_get_fixnum, primitive.shift])});\n"
+      
+      elsif type == :ps_print_string
+        "printf(\"%s\", #{self.compile_sexp([:pi_get_str, primitive.shift])});printf(\"\\n\");\n"
+      
+      elsif type == :ps_cvar_assign
         name = primitive.shift.to_s
         val = self.compile_sexp(primitive.shift)
-        if @decls[name]
-          decl = ''
-        else
-          @decls[name] = true
-          decl = "struct gs_value *#{name};\n"
-        end
+        decl = "struct gs_value *#{name};\n"
         "#{decl}#{name} = #{val};\n"
-      elsif type == :if
-        cond = self.compile_sexp(primitive.shift)
-        then_code = self.compile_sexp(primitive.shift)
-        else_code = self.compile_sexp(primitive.shift)
-        "if(#{cond}) {\n#{then_code}\n} else { \n#{else_code}\n}\n"
-      elsif type == :primitive_equal
-        left = self.compile_sexp(primitive.shift)
-        right = self.compile_sexp(primitive.shift)
-        "#{left} == #{right}"
       
-
-      elsif type == :lvar
-        primitive.shift.to_s
+      elsif type == :ps_push
+        "gs_stack_push();                           // >>>>>>>>>>>> #{primitive.shift}"
       
-      elsif type == :lit_str
-        str = primitive.shift
-        raise 'need string' unless String === str
-        "gs_string_literal(\"#{str}\", #{str.bytesize})"
-      elsif type == :lit_fixnum
-        fixnum = primitive.shift
-        fixnum = self.compile_sexp(fixnum) unless Fixnum === fixnum
-        "gs_fixnum_literal(#{fixnum})"
-      elsif type == :c_const
-        primitive.shift
+      elsif type == :ps_pop
+        "gs_stack_pop();                         // <<<<<<<<<<<<"
 
+      elsif type == :ps_init_lscope
+        "gs_lvars_init();                           // LSCOPE"
 
-      elsif type == :lvar_assign
-        n, v = self.compile_sexp([:getstring, primitive.shift]), self.compile_sexp(primitive.shift)
+      elsif type == :ps_set_result
+        "(*gs_stack_pointer).result = #{self.compile_sexp(primitive.shift)};"
+
+      elsif type == :ps_set_typeof
+        arg = primitive.shift
+        #{}"(gemstone_typeof(#{arg}) == GS_TYPE_STRING ? \"string\" : " + 
+         # "(gemstone_typeof(#{arg}) == GS_TYPE_FIXNUM ? \"fixnum\" : \"\")" +  ")"
+        self.compile_sexp([:pb_if, 
+            [:pi_c_equal, [:pi_typeof, arg], [:pi_c_const, "GS_TYPE_STRING"]], 
+            [:ps_set_result, [:pi_lit_str, "string"]],
+            [:ps_set_result, [:pi_lit_str, "fixnum"]]
+        ])
+
+      elsif type == :ps_lvar_assign
+        n, v = self.compile_sexp([:pi_get_str, primitive.shift]), self.compile_sexp(primitive.shift)
         "gs_lvars_assign(#{n}, #{v});"
-
-      elsif type == :lvar_get
-        n = self.compile_sexp([:getstring, primitive.shift])
-        "gs_lvars_fetch(#{n})"
-
-      elsif type == :getstring
-        "(#{self.compile_sexp(primitive.shift)})->string"
-
-      elsif type == :getnum
-        "(#{self.compile_sexp(primitive.shift)})->fixnum"
-      
-      elsif type == :send
-        res = [:block].concat Gemstone::Transformations::UnwindStack.apply(primitive)
-        self.compile_sexp(res)
-
-      elsif type == :strings_equal
-        a = self.compile_sexp([:getstring, primitive.shift])
-        b = self.compile_sexp([:getstring, primitive.shift])
-        "strcmp(#{a}, #{b})==0"
-      
-      elsif type == :lambda
+     
+      elsif type == :ps_push_lambda
         name = "my_lambda_#{@lambdas.length}"
         funcname = name + '_func'
         valname = name + '_val'
@@ -212,65 +198,135 @@ gs_argstack_push(#{valname});
 C
         @lambdas << func
         x      
-      elsif type == :call_lambda
-        "arg->lambda_func();"
-      elsif type == :push
-        "gs_stack_push();                           // >>>>>>>>>>>> #{primitive.shift}"
-      elsif type == :pop
-        "gs_stack_pop();                         // <<<<<<<<<<<<"
 
-      elsif type == :init_lscope
-        "gs_lvars_init();                           // LSCOPE"
+      elsif type == :ps_call_lambda
+        "#{self.compile_sexp(primitive.shift)}->lambda_func();"
 
-
-      elsif type == :poparg
-        "gs_argstack_pop()"
-      elsif type == :pusharg
-        what = self.compile_sexp(primitive.shift)
-        "gs_argstack_push(#{what});"
-      elsif type == :setres
-        "(*gs_stack_pointer).result = #{self.compile_sexp(primitive.shift)};                         // ============"
-      elsif type == :getres
-        "(*gs_stack_pointer).result"
-      elsif type == :get_inner_res
-        "(gs_stack_pointer+1)->result"
-      elsif type == :nop
-
-      elsif type == :kernel_dispatch
-        "kernel_dispatch();"
-
-      elsif type == :raw
-        primitive.shift
-
-      elsif type == :object_set_message_dispatcher
+      elsif type == :ps_object_set_message_dispatcher
         name = 'object_set_message_dispatcher_'+uuid.to_s
         x=<<C
 /* SET DISPATCHER */
 struct gs_value *#{name} = #{self.compile_sexp(primitive.shift)};
 #{name}->dispatcher = #{self.compile_sexp(primitive.shift)};
 C
-      elsif type == :object_dispatch
+      elsif type == :ps_object_dispatch
         name = 'dispatch_'+uuid.to_s
         x=<<C
-struct gs_value *#{name} = #{self.compile_sexp([:poparg])};
+struct gs_value *#{name} = #{self.compile_sexp([:pi_poparg])};
 gs_stack_pointer->receiver = #{name};
 
 if(#{name}->dispatcher) {
-  #{self.compile_sexp([:send, :kernel, [[:lit_str, "run_lambda"], [:raw, "#{name}->dispatcher"]]])}
+  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "#{name}->dispatcher"]]])}
 } else {
   string_dispatch();
 }
 if(0) {
-  #{self.compile_sexp([:send, :kernel, [[:lit_str, "puts"], [:lit_str, "message sent to value without dispatcher"]]])}
+  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "message sent to value without dispatcher"]]])}
 }
 
 C
+
+
+
+
+
+
+      #
+      # PRIMITIVE BLOCKS
+      #
+      elsif type == :pb_block
+        primitive.map do |statement|
+          self.compile_sexp(statement)
+        end.join("\n")
+
+      elsif type == :pb_if
+        cond = self.compile_sexp(primitive.shift)
+        then_code = self.compile_sexp(primitive.shift)
+        else_code = self.compile_sexp(primitive.shift)
+        "if(#{cond}) {\n#{then_code}\n} else { \n#{else_code}\n}\n"
+
+
+
+      #
+      # PRIMITIVE INLINES
+      #
+      elsif type == :pi_typeof
+        arg = self.compile_sexp(primitive.shift)
+        "gemstone_typeof(#{arg})"
+      
+      elsif type == :pi_c_equal
+        left = self.compile_sexp(primitive.shift)
+        right = self.compile_sexp(primitive.shift)
+        "#{left} == #{right}"
+
+      elsif type == :pi_cvar_get
+        primitive.shift.to_s
+      
+      elsif type == :pi_lit_str
+        str = primitive.shift
+        raise 'need string' unless String === str
+        "gs_string_literal(\"#{str}\", #{str.bytesize})"
+      
+      elsif type == :pi_lit_fixnum
+        fixnum = primitive.shift
+        fixnum = self.compile_sexp(fixnum) unless Fixnum === fixnum
+        "gs_fixnum_literal(#{fixnum})"
+      
+      elsif type == :pi_c_const
+        primitive.shift
+
+      elsif type == :pi_get_str
+        "(#{self.compile_sexp(primitive.shift)})->string"
+
+      elsif type == :pi_get_fixnum
+        "(#{self.compile_sexp(primitive.shift)})->fixnum"
+
+      elsif type == :pi_stringvals_equal
+        a = self.compile_sexp([:pi_get_str, primitive.shift])
+        b = self.compile_sexp([:pi_get_str, primitive.shift])
+        "strcmp(#{a}, #{b})==0"
+
+      elsif type == :pi_get_result
+        "(*gs_stack_pointer).result"
+
+      elsif type == :pi_lvar_get
+        n = self.compile_sexp([:pi_get_str, primitive.shift])
+        "gs_lvars_fetch(#{n})"
+
+      elsif type == :pi_poparg
+        "gs_argstack_pop()"
+
+      elsif type == :ps_pusharg
+        what = self.compile_sexp(primitive.shift)
+        "gs_argstack_push(#{what});"
+
+
+      elsif type == :pi_get_inner_res
+        "(gs_stack_pointer+1)->result"
+      
+      elsif type == :ps_kernel_dispatch
+        "kernel_dispatch();"
+
+
+      elsif type == :nop
+
+      elsif type == :_raw
+        primitive.shift
+
+
+
+
+
+      elsif type == :send
+        res = [:pb_block].concat Gemstone::Transformations::UnwindStack.apply(primitive)
+        self.compile_sexp(res)
+
 
       else
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end
       @level -= 1
-      #log "=> #{val}", 3
+      log "=> #{val}", 3
       val
     end
   end
