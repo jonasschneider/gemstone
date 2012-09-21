@@ -137,7 +137,7 @@ describe Gemstone do
       [:pusharg, [:lit_str, "puts"]],
       [:kernel_dispatch]
     ]
-    out.should eq("some string\nlast inner call did not provide a return value\n")
+    out.should eq("some string\nlast kernel call did not provide a return value\n")
   end
 
   it "can compare strings" do

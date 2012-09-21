@@ -265,51 +265,67 @@ C
       steps
     end
 
+    module Kernel
+      def self.puts(arg)
+        [:call, :println, arg]
+      end
+
+      def self.typeof(arg)
+        [:call, :typeof, arg]
+      end
+
+      def self.returnstr(arg)
+        [:setres, arg]
+      end
+
+      def self.lvar_assign(arg)
+        [:lvar_assign, arg, [:poparg]]
+      end
+
+      def self.lvar_get(arg)
+        [:setres, [:lvar_get, arg]]
+      end
+
+      def self.run_lambda(arg)
+        [:call_lambda, arg]
+      end
+    end
+
     def compile_kernel_dispatcher
+      def build(methods)
+        meth = methods.shift
+        invocation = Kernel.send(meth, [:lvar, :arg])
+
+        if methods.empty?
+          tail = [:block,
+            [:call, :println, [:lit_str, "unknown kernel message:"]],
+            [:call, :println, [:lvar, :called_func]]
+          ]
+        else
+          tail = build(methods)
+        end
+
+        [:if, 
+          [:strings_equal, [:lvar, :called_func], [:lit_str, meth.to_s]],
+          invocation,
+          tail
+        ]
+      end
+
+      tree = build(Kernel.singleton_methods)
+
       sexp = 
       [:block, 
         [:assign, :called_func, [:poparg]],
         [:assign, :arg, [:poparg]],
 
-        [:raw, 'LOG("popd arg: %p", arg);'+"\n"],
-
         [:raw, 'LOG("running kernel call \'%s\'", called_func->string);'+"\n"],
-        
-        [:if, 
-          [:strings_equal, [:lvar, :called_func], [:lit_str, "puts"]],
-          [:call, :println, [:lvar, :arg]],
-          [:if, 
-            [:strings_equal, [:lvar, :called_func], [:lit_str, "typeof"]],
-            [:call, :typeof, [:lvar, :arg]],
-            [:if, 
-              [:strings_equal, [:lvar, :called_func], [:lit_str, "returnstr"]],
-              [:setres, [:lvar, :arg]],
-              [:if, 
-                [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_assign"]],
-                [:block,
-                  [:lvar_assign, [:lvar, :arg], [:poparg]],
-                  [:setres, [:lvar, :arg]],
-                ],
-                [:if, 
-                  [:strings_equal, [:lvar, :called_func], [:lit_str, "lvar_get"]],
-                  [:setres, [:lvar_get, [:lvar, :arg]]],
-                  [:if, 
-                    [:strings_equal, [:lvar, :called_func], [:lit_str, "run_lambda"]],
-                    [:call_lambda, [:lvar, :arg]],
-                    [:block,
-                      [:call, :println, [:lit_str, "unknown kernel message:"]],
-                      [:call, :println, [:lvar, :called_func]]
-                    ]
-                  ]
-                ]
-              ]
-            ]
-          ]
-        ],
 
+        tree,
+        
         [:if,
           [:primitive_equal, [:getres], 0],
-          [:setres, [:lit_str, "last inner call did not provide a return value"]],
+          [:setres, [:lit_str, "last kernel call did not provide a return value"]],
           [:nop]
         ],
 
