@@ -96,8 +96,8 @@ describe Gemstone, "primitives" do
       [:ps_pusharg, [:pi_lit_str, "third pushed"]],
       [:ps_dump_argstack]
     ]
-    out.should include("2: <string> third pushed\n")
-    out.should include("1: <fixnum> 2\n")
-    out.should include("0: <string> first pushed\n")
+    out.should include("<string> third pushed\n")
+    out.should include("<fixnum> 2\n")
+    out.should include("<string> first pushed\n")
   end
 end
