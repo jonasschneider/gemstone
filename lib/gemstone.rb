@@ -28,7 +28,7 @@ void string_dispatch() {
 int main() {
 
 gs_stack_init();
-gs_stack_push_with_lscope(); // so we have a local scope
+gs_stack_push(); // so we have a local scope
 
 
 #{c} 

@@ -10,7 +10,8 @@ describe Gemstone do
   def compile_and_execute(sexp)
     Gemstone.compile sexp, path_to_binary
     o = %x(#{path_to_binary})
-    #$?.exitstatus.should eq(0)
+    p o
+    $?.exitstatus.should eq(0)
     o
   end
 

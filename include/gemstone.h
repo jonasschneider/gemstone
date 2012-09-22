@@ -109,17 +109,6 @@ void gs_stack_init() {
   gs_stack_pointer = gs_stack;
 }
 
-void gs_stack_push_with_lscope() {
-  // stack element 0 is left empty for now
-  gs_stack_pointer = gs_stack_pointer + 1;
-  LOG(">> entering stack level and creating new lscope [%ld]", (gs_stack_pointer - gs_stack));
-  //memset(gs_stack_pointer, 0, sizeof(struct gs_stack_frame));
-
-  gs_argstack_init();
-
-  gs_lvars_init();
-}
-
 void gs_stack_push() {
   gs_stack_pointer = gs_stack_pointer + 1;
   
@@ -127,6 +116,7 @@ void gs_stack_push() {
   memset(gs_stack_pointer, 0, sizeof(struct gs_stack_frame));
 
   gs_argstack_init();
+  gs_lvars_init();
 }
 
 void gs_stack_push_with_argstack_as_params() {
