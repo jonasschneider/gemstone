@@ -11,7 +11,8 @@ describe Gemstone::Transformations::UnwindStack do
       [:ps_pusharg, [:pi_get_result]],
 
       [:ps_pusharg, [:pi_lit_str, "puts"]],
-      [:ps_kernel_dispatch]
+      [:ps_kernel_dispatch],
+      [:ps_pusharg, [:pi_get_result]]
     ])
   end
 
@@ -31,7 +32,7 @@ describe Gemstone::Transformations::UnwindStack do
       [:ps_push_with_argstack_as_params],
       [:ps_object_dispatch],
       [:ps_pop],
-      [:ps_set_result, [:pi_get_inner_res]]
+      [:ps_pusharg, [:pi_get_inner_res]]
     ])
   end
 end

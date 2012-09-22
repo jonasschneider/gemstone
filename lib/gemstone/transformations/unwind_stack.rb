@@ -15,12 +15,13 @@ module Gemstone
 
         if target == :kernel
           steps << [:ps_kernel_dispatch]
+          steps << [:ps_pusharg, [:pi_get_result]]
         else
           steps.concat traverse(target)
           steps << [:ps_push_with_argstack_as_params]
           steps << [:ps_object_dispatch]
           steps << [:ps_pop]
-          steps << [:ps_set_result, [:pi_get_inner_res]]
+          steps << [:ps_pusharg, [:pi_get_inner_res]]
         end
 
         
@@ -36,8 +37,6 @@ module Gemstone
           part.shift
 
           steps.concat self.apply(part)
-
-          steps << [:ps_pusharg, [:pi_get_result]]
         elsif part.first.to_s.start_with?('ps_push_')
           steps << part
         else
