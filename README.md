@@ -1,8 +1,12 @@
 # Gemstone [![Build Status](https://secure.travis-ci.org/jonasschneider/gemstone.png)](http://travis-ci.org/jonasschneider/gemstone)
 
-This is an experimental implementation of a compiler backend from a Rubyish language to C. It's intended mainly as code excercise and demonstration of the awesomeness of pure TDD. Since it's a backend, it doesn't accept real syntax, but an AST-like Sexp, as input. The output is (horribly ugly) C that compiles (at least) on recent versions of OS X.
+This is an experimental implementation of a compiler for a dynamic, Ruby-like programming language, written in Ruby. It's intended primarily as a code excercise.
 
-The specs show the complete development of the code, no code changes have been made without specing the expected results first. The specs, read in order, should represent the growing complexity of added features (with the occasional utility function sprinkled in).
+The compiler backend operates on a Sexp-like AST, and produces (horribly ugly) C that is is tested to compile on recent versions of OS X.
+
+The frontend creating the AST is probably going use a Ruby-like syntax.
+
+The specs show the complete development of the code. The specs, read in order, should represent the growing complexity of added features (with the occasional utility function sprinkled in).
 
 ## Synopsis
 
