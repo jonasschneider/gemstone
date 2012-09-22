@@ -7,7 +7,7 @@ module Gemstone
         steps = []
         message_parts = node.shift.reverse
 
-        steps << [:ps_push]
+        
         
         part_refs = message_parts.map do |part|
           steps.concat traverse(part)
@@ -17,11 +17,12 @@ module Gemstone
           steps << [:ps_kernel_dispatch]
         else
           steps.concat traverse(target)
-          steps << [:ps_init_lscope]  # create a new local scope for non-kernel calls
+          steps << [:ps_push_with_argstack_as_params]
           steps << [:ps_object_dispatch]
+          steps << [:ps_pop]
         end
 
-        steps << [:ps_pop]
+        
         
         steps
       end
@@ -35,7 +36,7 @@ module Gemstone
 
           steps.concat self.apply(part)
 
-          steps << [:ps_pusharg, [:pi_get_inner_res]]
+          steps << [:ps_pusharg, [:pi_get_result]]
         elsif part.first.to_s.start_with?('ps_push_')
           steps << part
         else

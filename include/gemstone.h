@@ -18,13 +18,16 @@ struct gs_value {
 
 
 struct gs_stack_frame {
-  struct gs_value *receiver;
+  // Argument stack for nested calls
   struct gs_value *argument_stack[16];
   struct gs_value **argument_stack_pointer;
-
-  hash_table_t *lvars;
-
   struct gs_value *result;
+
+  // Parameters given from the parent stack frame
+  struct gs_value *parameters[16];
+
+  struct gs_value *receiver;
+  hash_table_t *lvars;
 };
 
 
@@ -46,11 +49,32 @@ void gs_argstack_init() {
 void gs_argstack_push(struct gs_value *to_push) {
   *(*gs_stack_pointer).argument_stack_pointer = to_push;
   (*gs_stack_pointer).argument_stack_pointer = (*gs_stack_pointer).argument_stack_pointer + 1;
+  LOG(">> push %p onto argstack at %p (now %u)", to_push, (*gs_stack_pointer).argument_stack, ((*gs_stack_pointer).argument_stack_pointer - (*gs_stack_pointer).argument_stack));
+  gs_argstack_dump();
 }
 
 struct gs_value *gs_argstack_pop() {
   (*gs_stack_pointer).argument_stack_pointer = (*gs_stack_pointer).argument_stack_pointer - 1;
+  LOG("<< pop %p from argstack %p (now %u)", *(*gs_stack_pointer).argument_stack_pointer, (*gs_stack_pointer).argument_stack, ((*gs_stack_pointer).argument_stack_pointer - (*gs_stack_pointer).argument_stack));
+  gs_argstack_dump();
   return *((*gs_stack_pointer).argument_stack_pointer);
+}
+
+void gs_argstack_dump() {
+  struct gs_value *val;
+  int i = 0;
+  LOG("== Dumping argstack at %p", (*gs_stack_pointer).argument_stack);
+  while((val = (*gs_stack_pointer).argument_stack[i]) && i < ((*gs_stack_pointer).argument_stack_pointer - (*gs_stack_pointer).argument_stack)) {
+    if(gemstone_typeof(val) == GS_TYPE_STRING)
+      LOG("%d @ %p: <string> %s", i, val, val->string);
+    else if(gemstone_typeof(val) == GS_TYPE_FIXNUM)
+      LOG("%d @ %p: <fixnum> %llu", i, val, val->fixnum);
+    else if(gemstone_typeof(val) == GS_TYPE_LAMBDA)
+      LOG("%d @ %p: <lambda> location: %p", i, val, val->lambda_func);
+    else
+      LOG("%d @ %p: <unknown>", i, val);
+    i++;
+  }
 }
 
 
@@ -97,15 +121,29 @@ void gs_stack_push_with_lscope() {
 }
 
 void gs_stack_push() {
-  // stack element 0 is left empty for now
-  hash_table_t *lvars = gs_stack_pointer->lvars;
   gs_stack_pointer = gs_stack_pointer + 1;
-  gs_stack_pointer->lvars = lvars;
   
-  LOG(">> entering stack level and preserving lscope [%ld]", (gs_stack_pointer - gs_stack));
-  //memset(gs_stack_pointer, 0, sizeof(struct gs_stack_frame));
+  LOG(">> entering stack level [%ld]", (gs_stack_pointer - gs_stack));
+  memset(gs_stack_pointer, 0, sizeof(struct gs_stack_frame));
 
   gs_argstack_init();
+}
+
+void gs_stack_push_with_argstack_as_params() {
+  struct gs_value *passed_parameters[16];
+  INFO("pushing stack and argstack into params");
+  struct gs_value *n;
+  long long unsigned int i = 0;
+  
+  while(i < 16) {
+    if(n = gs_argstack_pop())
+      passed_parameters[i] = n;
+    else
+      passed_parameters[i] = 0;
+    i++;
+  }
+  gs_stack_push();
+  memcpy((*gs_stack_pointer).parameters, passed_parameters, sizeof((*gs_stack_pointer).parameters));
 }
 
 struct gs_stack_frame gs_stack_pop() {

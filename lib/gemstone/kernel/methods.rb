@@ -41,18 +41,17 @@ module Gemstone
 
       def self.run_lambda
         [:pb_block,
+          [:ps_dump_argstack],
           [:ps_cvar_assign, "arg", [:pi_poparg]],
           [:ps_call_lambda, [:pi_cvar_get, 'arg']]
         ]
       end
 
-      def self.run_lambda_in_parent_frame
+      def self.getarg
         [:pb_block,
-          
           [:ps_cvar_assign, "arg", [:pi_poparg]],
-          [:ps_pop],
-          [:ps_call_lambda, [:pi_cvar_get, 'arg']],
-          [:ps_push]
+          [:ps_push_scope_argument, [:pi_cvar_get, 'arg']],
+          [:ps_set_result, [:pi_poparg]]
         ]
       end
 

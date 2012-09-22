@@ -18,8 +18,6 @@ void kernel_dispatch() {
 }
 
 void string_dispatch() {
-  // discard the method name
-  #{compiler.compile_sexp [:pi_poparg]};
 
   #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
 }
@@ -197,7 +195,7 @@ memset(#{valname}, 0, sizeof(struct gs_value));
 gs_argstack_push(#{valname});
 C
         @lambdas << func
-        x      
+        x
 
       elsif type == :ps_call_lambda
         "#{self.compile_sexp(primitive.shift)}->lambda_func();"
@@ -212,11 +210,13 @@ C
       elsif type == :ps_object_dispatch
         name = 'dispatch_'+uuid.to_s
         x=<<C
-struct gs_value *#{name} = #{self.compile_sexp([:pi_poparg])};
+  INFO("calling dat dispatcher");
+struct gs_value *#{name} = (*gs_stack_pointer).parameters[0];
 gs_stack_pointer->receiver = #{name};
 
 if(#{name}->dispatcher) {
-  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda_in_parent_frame"], [:_raw, "#{name}->dispatcher"]]])}
+
+  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "#{name}->dispatcher"]]])}
 } else {
   string_dispatch();
 }
@@ -225,9 +225,15 @@ if(0) {
 }
 
 C
+      elsif type == :ps_push_with_argstack_as_params
+        "gs_stack_push_with_argstack_as_params();"
+      
+      elsif type == :ps_push_scope_argument
+        num = self.compile_sexp [:pi_get_fixnum, primitive.shift]
+        "gs_argstack_push((*gs_stack_pointer).parameters[#{num}]);"
 
-
-
+      elsif type == :ps_dump_argstack
+        "gs_argstack_dump();"
 
 
 

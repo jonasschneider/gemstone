@@ -14,6 +14,13 @@ describe Gemstone, "primitives" do
     o
   end
 
+  def compile_and_execute_with_stderr(sexp)
+    Gemstone.compile sexp, path_to_binary
+    o = %x(#{path_to_binary} 2>&1)
+    $?.exitstatus.should eq(0)
+    o
+  end
+
   it 'compiles a hello world' do
     out = compile_and_execute [:ps_print, [:pi_lit_str, "Hello world"]]
     out.should eq("Hello world\n")
@@ -80,5 +87,17 @@ describe Gemstone, "primitives" do
         [:ps_cvar_assign, 'b', [:pi_lit_str, "Bye world"]],
         [:pb_if, [:pi_stringvals_equal, [:pi_cvar_get, 'a'], [:pi_cvar_get, 'b']], [:ps_print, [:pi_lit_str, "match"]], [:ps_print, [:pi_lit_str, "no match"]]]]
     out.should eq("no match\n")
+  end
+
+  it 'can dump the current argstack' do
+    out = compile_and_execute_with_stderr [:pb_block, 
+      [:ps_pusharg, [:pi_lit_str, "first pushed"]],
+      [:ps_pusharg, [:pi_lit_fixnum, 2]],
+      [:ps_pusharg, [:pi_lit_str, "third pushed"]],
+      [:ps_dump_argstack]
+    ]
+    out.should include("2: <string> third pushed\n")
+    out.should include("1: <fixnum> 2\n")
+    out.should include("0: <string> first pushed\n")
   end
 end
