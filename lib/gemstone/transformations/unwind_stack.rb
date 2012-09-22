@@ -20,6 +20,7 @@ module Gemstone
           steps << [:ps_push_with_argstack_as_params]
           steps << [:ps_object_dispatch]
           steps << [:ps_pop]
+          steps << [:ps_set_result, [:pi_get_inner_res]]
         end
 
         
