@@ -18,13 +18,22 @@ void kernel_dispatch() {
   #{compiler.compile_sexp(Kernel.dispatcher_sexp)}
 }
 
-void string_dispatch() {
+void object_dispatch() {
+  INFO("inside object dispatcher!!");
+  gs_stack_pointer->receiver = (*gs_stack_pointer).parameters[0];
 
-  #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
-}
+  LOG("got message: %s", gs_stack_pointer->parameters[1]->string);
 
-void fixnum_dispatch() {
-  #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, '(gs_stack_pointer->receiver->fixnum + gs_stack_pointer->parameters[2]->fixnum)']]]}
+  if(gs_stack_pointer->receiver->dispatcher) {
+    #{compiler.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "gs_stack_pointer->receiver->dispatcher"]]])}
+  } else {
+    if(gemstone_typeof(gs_stack_pointer->receiver)==GS_TYPE_FIXNUM)
+      #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, '(gs_stack_pointer->receiver->fixnum + gs_stack_pointer->parameters[2]->fixnum)']]]}
+    else
+      #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
+
+  }
+
 }
 
 
@@ -217,26 +226,8 @@ struct gs_value *#{name} = #{self.compile_sexp(primitive.shift)};
 #{name}->dispatcher = #{self.compile_sexp(primitive.shift)};
 C
       elsif type == :ps_object_dispatch
-        name = 'dispatch_'+uuid.to_s
-        x=<<C
-  INFO("calling dat dispatcher");
-struct gs_value *#{name} = (*gs_stack_pointer).parameters[0];
-gs_stack_pointer->receiver = #{name};
-
-if(#{name}->dispatcher) {
-
-  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "#{name}->dispatcher"]]])}
-} else {
-  if(gemstone_typeof(#{name})==GS_TYPE_FIXNUM)
-    fixnum_dispatch();
-  else
-    string_dispatch();
-}
-if(0) {
-  #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "message sent to value without dispatcher"]]])}
-}
-
-C
+        "object_dispatch();"
+      
       elsif type == :ps_push_with_argstack_as_params
         "gs_stack_push_with_argstack_as_params();"
       

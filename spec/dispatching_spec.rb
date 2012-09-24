@@ -61,24 +61,26 @@ describe Gemstone, "dispatching messages to values" do
     out.should eq("outer val\ninner val\nouter val\n")
   end
 
+  it "breaks when trying to access a non-existing local variable"
+
   it "can define a method on an object" do
     out = compile_and_execute [:pb_block, 
-        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "checker"], [:pi_lit_str, ""]]],
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "my test string"]]],
         
         [:send,
           [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
           [
             [:pi_lit_str, "define_method"],
-            [:pi_lit_str, "a"],
+            [:pi_lit_str, "my_method_name"],
             [:ps_push_lambda, [:pb_block,
               [:ps_hello_world]
             ]]
           ]
-        ]],
+        ],
 
         [:send, 
           [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
-          [[:pi_lit_str, "a"]]
+          [[:pi_lit_str, "my_method_name"]]
         ]
       ]
     out.should eq("Hello World!\n")
