@@ -124,7 +124,11 @@ C
       #
       # PRIMITIVE STATEMENTS
       #
-      if type == :ps_print
+
+      if type == :ps_hello_world
+        self.compile_sexp([:ps_print, [:pi_lit_str, "Hello world!"]])
+
+      elsif type == :ps_print
         arg = primitive.shift
         self.compile_sexp([:pb_if, 
             [:pi_c_equal, [:pi_typeof, arg], [:pi_c_const, "GS_TYPE_STRING"]], 
@@ -173,7 +177,7 @@ C
       elsif type == :ps_lvar_assign
         n, v = self.compile_sexp([:pi_get_str, primitive.shift]), self.compile_sexp(primitive.shift)
         "gs_lvars_assign(#{n}, #{v});"
-     
+
       elsif type == :ps_push_lambda
         name = "my_lambda_#{@lambdas.length}"
         funcname = name + '_func'

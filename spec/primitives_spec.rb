@@ -26,6 +26,11 @@ describe Gemstone, "primitives" do
     out.should eq("Hello world\n")
   end
 
+  it 'compiles a hello_world primitive' do
+    out = compile_and_execute [:ps_hello_world]
+    out.should eq("Hello world!\n")
+  end
+
   it 'compiles a hello world with another string' do
     out = compile_and_execute [:ps_print, [:pi_lit_str, "Hello my dear"]]
     out.should eq("Hello my dear\n")
