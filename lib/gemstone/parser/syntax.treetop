@@ -1,0 +1,85 @@
+module Gemstone
+  module Parser
+    grammar Syntax
+
+      rule program
+        first_statement:statement rest_statements:("\n" s:statement)* {
+          def sexp
+            statements = [first_statement] + rest_statements.elements.map{|l|l.s}
+            out = [:pb_block]
+            statements.each do |s|
+              p "trying", s
+
+              out << s.sexp
+            end
+            out
+          end
+        }
+      end
+
+      rule statement
+        primitive / expression
+      end
+
+      rule expression
+        lvar_assignment
+        /
+        string_literal
+        /
+        method_call
+      end
+
+      rule method_call
+        method:variable_or_method_name optional_arg:(blank arg:expression)? {
+          def sexp
+            if optional_arg.respond_to?(:arg)
+              [:send, :kernel, [[:pi_lit_str, method.text_value], optional_arg.arg.sexp]]
+            else
+              [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, method.text_value]]]
+            end
+          end
+        }
+      end
+
+      rule lvar_assignment
+        variable_or_method_name blank? '=' blank? expression {
+          def sexp
+            [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, variable_or_method_name.text_value], expression.sexp]]
+          end
+        }
+      end
+
+      rule primitive
+        "Gemstone.primitive" blank symbol {
+          def sexp
+            [symbol.name.to_sym]
+          end
+        }
+      end
+
+      rule blank
+        ' '
+      end
+
+      rule string_literal
+        ['"] chars:[^'"]* ['"] {
+          def sexp
+            [:pi_lit_str, chars.text_value]
+          end
+        }
+      end
+
+      rule variable_or_method_name
+        [a-zA-Z_] [a-zA-Z_0-9]*
+      end
+
+      rule symbol
+        ':' chars:[a-zA-Z_]+ {
+          def name
+            chars.text_value
+          end
+        }
+      end
+    end
+  end
+end

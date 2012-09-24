@@ -1,3 +1,4 @@
+require 'gemstone/parser'
 require 'gemstone/kernel'
 require 'gemstone/transformations/unwind_stack'
 
