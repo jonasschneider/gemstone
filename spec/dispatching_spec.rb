@@ -83,7 +83,7 @@ describe Gemstone, "dispatching messages to values" do
           [[:pi_lit_str, "my_method_name"]]
         ]
       ]
-    out.should eq("Hello World!\n")
+    out.should eq("Hello world!\n")
   end
 
   it "can query a string for its length" do

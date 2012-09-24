@@ -13,7 +13,10 @@ struct gs_value {
 
   void (*lambda_func)(); // for lambdas
 
-  struct gs_value *dispatcher;
+  struct gs_value *dispatcher; // serious low-level stuff; if set, this gets called for
+                               // for every message instead of looking up in the method LUT
+
+  hash_table_t *methods;
 };
 
 
@@ -144,14 +147,19 @@ struct gs_stack_frame gs_stack_pop() {
   return *gs_stack_pointer;
 }
 
-
+void gs_value_new(struct gs_value *value) {
+  memset(value, 0, sizeof(struct gs_value));
+  value->methods = hash_table_new(MODE_VALUEREF); // TODO: more memory leakage
+}
 
 void gs_str_new(struct gs_value *value, const char *str, size_t len) {
+  gs_value_new(value);
   value->type = GS_TYPE_STRING;
   value->string = str;
 }
 
 void gs_fixnum_new(struct gs_value *value, unsigned long fixnum) {
+  gs_value_new(value);
   value->type = GS_TYPE_FIXNUM;
   value->fixnum = fixnum;
 }

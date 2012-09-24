@@ -19,19 +19,41 @@ void kernel_dispatch() {
 }
 
 void object_dispatch() {
-  INFO("inside object dispatcher!!");
   gs_stack_pointer->receiver = (*gs_stack_pointer).parameters[0];
-
+  LOG("inside object dispatcher, receiver: %p", gs_stack_pointer->receiver);
   LOG("got message: %s", gs_stack_pointer->parameters[1]->string);
 
-  if(gs_stack_pointer->receiver->dispatcher) {
-    #{compiler.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "gs_stack_pointer->receiver->dispatcher"]]])}
-  } else {
-    if(gemstone_typeof(gs_stack_pointer->receiver)==GS_TYPE_FIXNUM)
-      #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, '(gs_stack_pointer->receiver->fixnum + gs_stack_pointer->parameters[2]->fixnum)']]]}
-    else
-      #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
+  if(strcmp(gs_stack_pointer->parameters[1]->string, "define_method")==0) {
+    const char *name = gs_stack_pointer->parameters[2]->string;
+    struct gs_value *old_val = (struct gs_value *)hash_table_lookup(gs_stack_pointer->receiver->methods, (void*)name, strlen(name));
+    void *val = (void*)gs_stack_pointer->parameters[3];
 
+    if(old_val != NULL) {
+      LOG("method %s is already defined and set to %p!", name, old_val);
+    } else {
+      LOG("defining method %s pointing to %p", name, val);
+      hash_table_add(gs_stack_pointer->receiver->methods, (void*)name, strlen(name), val, sizeof(&val));
+    }
+  } else {
+    const char *called_method_name = gs_stack_pointer->parameters[1]->string;
+    struct gs_value *stored_method = (struct gs_value *)hash_table_lookup(gs_stack_pointer->receiver->methods, (void*)called_method_name, strlen(called_method_name));
+
+    if(stored_method) { // the method is a lambda
+      #{compiler.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "stored_method"]]])}
+    }
+
+    if(0) {
+
+      if(gs_stack_pointer->receiver->dispatcher) {
+        #{compiler.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "gs_stack_pointer->receiver->dispatcher"]]])}
+      } else {
+        // this is stdlib stuff
+        if(gemstone_typeof(gs_stack_pointer->receiver)==GS_TYPE_FIXNUM)
+          #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, '(gs_stack_pointer->receiver->fixnum + gs_stack_pointer->parameters[2]->fixnum)']]]}
+        else
+          #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
+      }
+    }
   }
 
 }
