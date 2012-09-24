@@ -87,6 +87,7 @@ describe Gemstone, "dispatching messages to values" do
   end
 
   it "can query a string for its length" do
+    pending
     out = compile_and_execute [:pb_block, 
         [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "0123456789"]]],
         [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "longer"], [:pi_lit_str, "01234567890123456789"]]],
@@ -111,6 +112,7 @@ describe Gemstone, "dispatching messages to values" do
   end
 
   it "can add two fixnums" do
+    pending
     out = compile_and_execute [:pb_block, 
         [:ps_cast, [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "a"], [:pi_lit_fixnum, 3]]]],
         [:ps_cast, [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "b"], [:pi_lit_fixnum, 2]]]],
@@ -127,31 +129,5 @@ describe Gemstone, "dispatching messages to values" do
         ]]],
       ]
     out.should eq("5\n")
-  end
-
-  it "can increment a fixnum" do
-    out = compile_and_execute [:pb_block, 
-        [:ps_cast, [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "a"], [:pi_lit_fixnum, 3]]]],
-
-        [:ps_cast, [:send, :kernel, [
-          [:pi_lit_str, "lvar_assign"],
-          [:pi_lit_str, "a"],
-          [:send, 
-            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
-            [
-              [:pi_lit_str, "+"],
-              [:pi_lit_fixnum, 1]
-            ]
-          ]
-        ]]],
-        
-        [:ps_cast, [:send, :kernel,
-          [
-            [:pi_lit_str, "puts"],
-            [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]]
-          ]
-        ]]
-      ]
-    out.should eq("4\n")
   end
 end

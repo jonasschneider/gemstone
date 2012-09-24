@@ -23,6 +23,11 @@ void object_dispatch() {
   LOG("inside object dispatcher, receiver: %p", gs_stack_pointer->receiver);
   LOG("got message: %s", gs_stack_pointer->parameters[1]->string);
 
+  if(gs_stack_pointer->receiver->dispatcher) {
+    #{compiler.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "gs_stack_pointer->receiver->dispatcher"]]])}
+    return;
+  }
+
   if(strcmp(gs_stack_pointer->parameters[1]->string, "define_method")==0) {
     const char *name = gs_stack_pointer->parameters[2]->string;
     struct gs_value *old_val = (struct gs_value *)hash_table_lookup(gs_stack_pointer->receiver->methods, (void*)name, strlen(name));
@@ -35,6 +40,7 @@ void object_dispatch() {
       hash_table_add(gs_stack_pointer->receiver->methods, (void*)name, strlen(name), val, sizeof(&val));
     }
   } else {
+
     const char *called_method_name = gs_stack_pointer->parameters[1]->string;
     struct gs_value *stored_method = (struct gs_value *)hash_table_lookup(gs_stack_pointer->receiver->methods, (void*)called_method_name, strlen(called_method_name));
 
@@ -43,16 +49,11 @@ void object_dispatch() {
     }
 
     if(0) {
-
-      if(gs_stack_pointer->receiver->dispatcher) {
-        #{compiler.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "gs_stack_pointer->receiver->dispatcher"]]])}
-      } else {
         // this is stdlib stuff
         if(gemstone_typeof(gs_stack_pointer->receiver)==GS_TYPE_FIXNUM)
           #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, '(gs_stack_pointer->receiver->fixnum + gs_stack_pointer->parameters[2]->fixnum)']]]}
         else
           #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
-      }
     }
   }
 
