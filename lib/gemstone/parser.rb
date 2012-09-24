@@ -9,7 +9,6 @@ module Gemstone
       parser = SyntaxParser.new
       result = parser.parse(code, root: 'program')
       unless result.nil?
-        p result
         result.sexp
       else
         raise parser.failure_reason.inspect + parser.inspect
