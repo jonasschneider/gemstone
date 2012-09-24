@@ -1,5 +1,5 @@
 language: ruby
-before_script: gem install rspec
+before_script: gem install rspec treetop
 script: rspec
 rvm:
   - 1.9.3
