@@ -3,22 +3,23 @@ module Gemstone
     grammar Syntax
 
       rule program
-        first_statement:line rest_statements:("\n"+ s:line)* {
+        blank? bare_block {
           def sexp
-            statements = [first_statement] + rest_statements.elements.map{|l|l.s}
-            out = [:pb_block]
-            statements.each do |s|
-              $stderr.puts "parsing line:", s.inspect
-
-              out << s.sexp unless s.sexp.nil?
-            end
-            out
+            bare_block.sexp
           end
         }
       end
 
       rule line
-        comment / statement 
+        comment / statement / nothing
+      end
+
+      rule nothing
+        "" {
+          def sexp
+            nil
+          end
+        }
       end
 
       rule comment
@@ -30,7 +31,45 @@ module Gemstone
       end
 
       rule statement
-        primitive / expression
+        method_definition / primitive / expression
+      end
+
+      rule method_definition
+        'def' blank target:variable_or_method_name '.' method_name:variable_or_method_name blank body:block_without_header {
+          def sexp
+            [:send,
+              [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, target.text_value]]],
+              [
+                [:pi_lit_str, "define_method"],
+                [:pi_lit_str, method_name.text_value],
+                [:ps_push_lambda, body.sexp]
+              ]
+            ]
+          end
+        }
+      end
+
+      rule block_without_header
+        bare_block "end" {
+          def sexp
+            bare_block.sexp
+          end
+        }
+      end
+
+      rule bare_block
+        head:line tail:(blank l:line)* {
+          def sexp
+            lines = [head] + tail.elements.map{|e|e.l}
+            out = [:pb_block]
+            lines.each do |s|
+              $stderr.puts "parsing line:", s.inspect
+
+              out << s.sexp unless s.sexp.nil?
+            end
+            out
+          end
+        }
       end
 
       rule expression
@@ -70,11 +109,11 @@ module Gemstone
       end
 
       rule blank
-        ' '
+        [ \n]+
       end
 
       rule string_literal
-        ['"] chars:[^'"]* ['"] {
+        ['"] chars:[^'"]* ["'] {
           def sexp
             [:pi_lit_str, chars.text_value]
           end
@@ -82,7 +121,7 @@ module Gemstone
       end
 
       rule variable_or_method_name
-        [a-zA-Z_] [a-zA-Z_0-9]*
+        !"end" [a-zA-Z_] [a-zA-Z_0-9]*
       end
 
       rule symbol

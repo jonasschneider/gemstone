@@ -8,11 +8,11 @@ module Gemstone
     def self.parse(code)
       parser = SyntaxParser.new
       result = parser.parse(code, root: 'program')
-      if result
-        #p result
+      unless result.nil?
+        p result
         result.sexp
       else
-        raise parser.failure_reason.inspect
+        raise parser.failure_reason.inspect + parser.inspect
       end
     end
   end

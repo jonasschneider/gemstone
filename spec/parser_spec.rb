@@ -28,4 +28,23 @@ describe Gemstone::Parser do
       [:send, :kernel, [[:pi_lit_str, "puts"], [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "checker"]]]]]
     ])
   end
+  
+  it "parses defining a method on a string" do
+    code = "def a.hello\nGemstone.primitive :ps_hello_world\nend"
+
+    described_class.parse(code).should eq([:pb_block, 
+      [:send,
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
+          [
+            [:pi_lit_str, "define_method"],
+            [:pi_lit_str, "hello"],
+            [:ps_push_lambda, [:pb_block,
+              [:ps_hello_world]
+            ]]
+          ]
+        ]
+    ])
+  end
+
+  it "parses calling a method of a string"
 end
