@@ -86,6 +86,38 @@ describe Gemstone, "dispatching messages to values" do
     out.should eq("Hello world!\n")
   end
 
+  it "can define a method on an object that takes a parameter" do
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "my test string"]]],
+        
+        [:send,
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+          [
+            [:pi_lit_str, "define_method"],
+            [:pi_lit_str, "my_method_name"],
+            [:ps_push_lambda, [:pb_block,
+              [:ps_print, [:pi_lit_str, "Hello from dat method. Your param:"]],
+              [:send, :kernel,
+                [
+                  [:pi_lit_str, "puts"],
+                  [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]]
+                ]
+              ]
+            ], [:pi_lit_str, "mystr"]]
+          ]
+        ],
+
+        [:send, 
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+          [
+            [:pi_lit_str, "my_method_name"],
+            [:pi_lit_str, "some cool string"],
+          ]
+        ]
+      ]
+    out.should eq("Hello from dat method. Your param:\nsome cool string\n")
+  end
+
   it "can query a string for its length" do
     pending
     out = compile_and_execute [:pb_block, 

@@ -172,7 +172,7 @@ C
               [:ps_print_string, [:pi_lit_str, "Runtime error, expected string or fixnum"]]
             ]
         ])
-      
+
       elsif type == :ps_print_fixnum
         "printf(\"%lld\\n\", #{self.compile_sexp([:pi_get_fixnum, primitive.shift])});\n"
       
@@ -215,11 +215,19 @@ C
         name = "my_lambda_#{@lambdas.length}"
         funcname = name + '_func'
         valname = name + '_val'
+
         procedure = self.compile_sexp(primitive.shift)
+        if argname = primitive.shift
+          argspec = self.compile_sexp([:send, :kernel, [[:pi_lit_str, "lvar_assign"], argname, [:_raw, "gs_stack_pointer->parameters[2]"]]])
+        else
+          argspec = ""
+        end
         func = <<C
 
 void #{funcname}(void) {
   INFO("inside lambda");
+
+  #{argspec}
 
   #{procedure}
 
