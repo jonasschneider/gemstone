@@ -35,18 +35,24 @@ module Gemstone
       end
 
       rule method_definition
-        'def' blank target:variable_or_method_name '.' method_name:variable_or_method_name blank body:block_without_header {
+        'def' blank target:variable_or_method_name '.' method_name:variable_or_method_name args:method_definition_arguments? blank body:block_without_header {
           def sexp
+            lambda = [:ps_push_lambda, body.sexp]
+            lambda << [:pi_lit_str, args.variable_or_method_name.text_value] unless args.empty?
             [:send,
               [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, target.text_value]]],
               [
                 [:pi_lit_str, "define_method"],
                 [:pi_lit_str, method_name.text_value],
-                [:ps_push_lambda, body.sexp]
+                lambda
               ]
             ]
           end
         }
+      end
+
+      rule method_definition_arguments
+        '(' variable_or_method_name ')'
       end
 
       rule block_without_header

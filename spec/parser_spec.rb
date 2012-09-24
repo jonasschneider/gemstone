@@ -46,12 +46,47 @@ describe Gemstone::Parser do
     ])
   end
 
-  it "parses calling a method of a string" do
+  it "parses defining a method that takes a parameter" do
+    code = "def a.hello(mystr)\nputs mystr\nend"
+
+    described_class.parse(code).should eq([:pb_block, 
+      [:send,
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
+          [
+            [:pi_lit_str, "define_method"],
+            [:pi_lit_str, "hello"],
+            [:ps_push_lambda, [:pb_block,
+              [:send, :kernel,
+                [
+                  [:pi_lit_str, "puts"],
+                  [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]]
+                ]
+              ]
+            ], [:pi_lit_str, "mystr"]]
+          ]
+        ]
+    ])
+  end
+
+  it "parses calling a method of a local variable" do
     code = "a.hello"
     described_class.parse(code).should eq([:pb_block, 
       [:send, 
         [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
         [[:pi_lit_str, "hello"]]
+      ]
+    ])
+  end
+
+  it "parses calling a method of a local variable with a string parameter" do
+    code = "a.hello 'world'"
+    described_class.parse(code).should eq([:pb_block, 
+      [:send, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
+        [
+          [:pi_lit_str, "hello"],
+          [:pi_lit_str, "world"]
+        ]
       ]
     ])
   end
