@@ -3,16 +3,28 @@ module Gemstone
     grammar Syntax
 
       rule program
-        first_statement:statement rest_statements:("\n" s:statement)* {
+        first_statement:line rest_statements:("\n"+ s:line)* {
           def sexp
             statements = [first_statement] + rest_statements.elements.map{|l|l.s}
             out = [:pb_block]
             statements.each do |s|
               p "trying", s
 
-              out << s.sexp
+              out << s.sexp unless s.sexp.nil?
             end
             out
+          end
+        }
+      end
+
+      rule line
+        comment / statement 
+      end
+
+      rule comment
+        '#' [^\n]* { 
+          def sexp
+            nil
           end
         }
       end

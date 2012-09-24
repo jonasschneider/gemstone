@@ -6,6 +6,11 @@ describe Gemstone::Parser do
     described_class.parse(code).should == [:pb_block, [:ps_hello_world]]
   end
 
+  it "ignores comments" do
+    code = "#my comment\nGemstone.primitive :ps_hello_world\n\n#another comment"
+    described_class.parse(code).should == [:pb_block, [:ps_hello_world]]
+  end
+
   it "parses two hello worlds" do
     code = "Gemstone.primitive :ps_hello_world\nGemstone.primitive :ps_hello_world"
     described_class.parse(code).should == [:pb_block, [:ps_hello_world], [:ps_hello_world]]

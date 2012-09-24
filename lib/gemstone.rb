@@ -349,7 +349,7 @@ C
         raise "unknown sexp type #{type} - #{primitive.inspect}"
       end
       @level -= 1
-      log "=> #{val}", 3
+      #log "=> #{val}", 3
       val
     end
   end
