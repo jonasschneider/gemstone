@@ -46,5 +46,13 @@ describe Gemstone::Parser do
     ])
   end
 
-  it "parses calling a method of a string"
+  it "parses calling a method of a string" do
+    code = "a.hello"
+    described_class.parse(code).should eq([:pb_block, 
+      [:send, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
+        [[:pi_lit_str, "hello"]]
+      ]
+    ])
+  end
 end

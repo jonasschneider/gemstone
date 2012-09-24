@@ -81,12 +81,27 @@ module Gemstone
       end
 
       rule method_call
-        method:variable_or_method_name optional_arg:(blank arg:expression)? {
+        target:(name:variable_or_method_name ".")? method:variable_or_method_name optional_arg:(blank arg:expression)? {
           def sexp
-            if optional_arg.respond_to?(:arg)
-              [:send, :kernel, [[:pi_lit_str, method.text_value], optional_arg.arg.sexp]]
+            has_target = target.respond_to?(:name)
+            has_arg = optional_arg.respond_to?(:arg)
+            if !has_target and !has_arg
+              return [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, method.text_value]]]
+            end
+
+            if has_arg
+              argz = [[:pi_lit_str, method.text_value], optional_arg.arg.sexp]
             else
-              [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, method.text_value]]]
+              argz = [[:pi_lit_str, method.text_value]]
+            end
+
+            if has_target
+              [:send,
+                [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, target.name.text_value]]],
+                argz
+              ]
+            else
+              [:send, :kernel, argz]
             end
           end
         }
