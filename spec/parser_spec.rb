@@ -1,4 +1,4 @@
-require 'gemstone'
+require 'env'
 
 describe Gemstone::Parser do
   it "parses a hello world" do

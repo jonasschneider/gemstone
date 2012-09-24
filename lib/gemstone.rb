@@ -51,7 +51,7 @@ C
       l += 1
       l.to_s.ljust(4)
     end
-    puts "# CODE:\n\n#{formatted}"
+    $stderr.puts "# CODE:\n\n#{formatted}"
 
     out = %x(gcc -Wall -g -DDEBUG -Iinclude tmp/code.c -o #{binary_path} 2>&1)
     if $? != 0
@@ -75,7 +75,7 @@ C
 
     def log(msg, additional_indent = 0)
       indent = '  '*@level
-      puts "#{indent} #{msg.gsub("\n", "\n "+indent+' '*additional_indent)}"
+      $stderr.puts "#{indent} #{msg.gsub("\n", "\n "+indent+' '*additional_indent)}"
     end
 
 

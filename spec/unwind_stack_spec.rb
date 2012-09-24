@@ -1,4 +1,4 @@
-require 'gemstone'
+require 'env'
 
 describe Gemstone::Transformations::UnwindStack do
   it "can unwind nested kernel calls" do

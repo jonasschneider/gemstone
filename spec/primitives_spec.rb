@@ -1,26 +1,6 @@
-require 'gemstone'
+require 'env'
 
 describe Gemstone, "primitives" do
-  let(:path_to_binary) { 'tmp/a.out' }
-  
-  before do
-    File.unlink path_to_binary if File.exists? path_to_binary
-  end
-
-  def compile_and_execute(sexp)
-    Gemstone.compile sexp, path_to_binary
-    o = %x(#{path_to_binary})
-    $?.exitstatus.should eq(0)
-    o
-  end
-
-  def compile_and_execute_with_stderr(sexp)
-    Gemstone.compile sexp, path_to_binary
-    o = %x(#{path_to_binary} 2>&1)
-    $?.exitstatus.should eq(0)
-    o
-  end
-
   it 'compiles a hello world' do
     out = compile_and_execute [:ps_print, [:pi_lit_str, "Hello world"]]
     out.should eq("Hello world\n")

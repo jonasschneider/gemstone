@@ -8,7 +8,7 @@ module Gemstone
             statements = [first_statement] + rest_statements.elements.map{|l|l.s}
             out = [:pb_block]
             statements.each do |s|
-              p "trying", s
+              $stderr.puts "parsing line:", s.inspect
 
               out << s.sexp unless s.sexp.nil?
             end

@@ -1,20 +1,6 @@
-require 'gemstone'
+require 'env'
 
 describe Gemstone do
-  let(:path_to_binary) { 'tmp/a.out' }
-  
-  before do
-    File.unlink path_to_binary if File.exists? path_to_binary
-  end
-
-  def compile_and_execute(sexp)
-    Gemstone.compile sexp, path_to_binary
-    o = %x(#{path_to_binary})
-    p o
-    $?.exitstatus.should eq(0)
-    o
-  end
-
   it "can send messages to kernel" do
     out = compile_and_execute [:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "Hello world"]]]
     out.should eq("Hello world\n")
