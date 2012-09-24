@@ -230,5 +230,24 @@ describe Gemstone do
         ]
       out.should eq("10\n20\n")
     end
+
+    it "can add two fixnums" do
+      out = compile_and_execute [:pb_block, 
+          [:ps_cast, [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "a"], [:pi_lit_fixnum, 3]]]],
+          [:ps_cast, [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "b"], [:pi_lit_fixnum, 2]]]],
+          
+          [:ps_cast, [:send, :kernel,
+            [[:pi_lit_str, "puts"],
+            [:send, 
+              [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
+              [
+                [:pi_lit_str, "+"],
+                [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "b"]]]
+              ]
+            ]
+          ]]],
+        ]
+      out.should eq("5\n")
+    end
   end
 end

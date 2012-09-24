@@ -22,6 +22,10 @@ void string_dispatch() {
   #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, 'strlen(gs_stack_pointer->receiver->string)']]]}
 }
 
+void fixnum_dispatch() {
+  #{compiler.compile_sexp [:ps_set_result, [:pi_lit_fixnum, [:_raw, '(gs_stack_pointer->receiver->fixnum + gs_stack_pointer->parameters[2]->fixnum)']]]}
+}
+
 
 #{compiler.lambdas.join("\n")}
 
@@ -218,7 +222,10 @@ if(#{name}->dispatcher) {
 
   #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "run_lambda"], [:_raw, "#{name}->dispatcher"]]])}
 } else {
-  string_dispatch();
+  if(gemstone_typeof(#{name})==GS_TYPE_FIXNUM)
+    fixnum_dispatch();
+  else
+    string_dispatch();
 }
 if(0) {
   #{self.compile_sexp([:send, :kernel, [[:pi_lit_str, "puts"], [:pi_lit_str, "message sent to value without dispatcher"]]])}
@@ -235,7 +242,12 @@ C
       elsif type == :ps_dump_argstack
         "gs_argstack_dump();"
 
+      elsif type == :ps_droparg
+        "gs_argstack_pop();"
 
+
+      elsif type == :ps_cast
+        self.compile_sexp([:pb_block, primitive.shift, [:ps_droparg]])
 
       #
       # PRIMITIVE BLOCKS

@@ -126,14 +126,16 @@ void gs_stack_push_with_argstack_as_params() {
   long long unsigned int i = 0;
   
   while(i < 16) {
-    if(n = gs_argstack_pop())
+    if(n = gs_argstack_pop()) {
       passed_parameters[i] = n;
-    else
+    } else {
       passed_parameters[i] = 0;
+      break;
+    }
     i++;
   }
   gs_stack_push();
-  memcpy((*gs_stack_pointer).parameters, passed_parameters, sizeof((*gs_stack_pointer).parameters));
+  memcpy(gs_stack_pointer->parameters, passed_parameters, sizeof(gs_stack_pointer->parameters));
 }
 
 struct gs_stack_frame gs_stack_pop() {
