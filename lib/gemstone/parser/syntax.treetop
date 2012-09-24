@@ -83,6 +83,8 @@ module Gemstone
         /
         string_literal
         /
+        fixnum_literal
+        /
         method_call
       end
 
@@ -137,6 +139,14 @@ module Gemstone
         ['"] chars:[^'"]* ["'] {
           def sexp
             [:pi_lit_str, chars.text_value]
+          end
+        }
+      end
+
+      rule fixnum_literal
+        [0-9]+ {
+          def sexp
+            [:pi_lit_fixnum, text_value.to_i]
           end
         }
       end

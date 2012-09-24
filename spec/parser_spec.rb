@@ -29,6 +29,13 @@ describe Gemstone::Parser do
     ])
   end
   
+  it "parses setting a fixnum variable" do
+    code = "checker = 1337"
+    described_class.parse(code).should eq([:pb_block, 
+      [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "checker"], [:pi_lit_fixnum, 1337]]]
+    ])
+  end
+
   it "parses defining a method on a string" do
     code = "def a.hello\nGemstone.primitive :ps_hello_world\nend"
 
