@@ -118,6 +118,44 @@ describe Gemstone, "dispatching messages to values" do
     out.should eq("Hello from dat method. Your param:\nsome cool string\n")
   end
 
+  it "can define and call a method on an object that takes two parameters" do
+    out = compile_and_execute [:pb_block, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, "mystr"], [:pi_lit_str, "my test string"]]],
+        
+        [:send,
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+          [
+            [:pi_lit_str, "define_method"],
+            [:pi_lit_str, "my_method_name"],
+            [:ps_push_lambda, [:pb_block,
+              [:send, :kernel,
+                [
+                  [:pi_lit_str, "puts"],
+                  [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]]
+                ]
+              ],
+              [:send, :kernel,
+                [
+                  [:pi_lit_str, "puts"],
+                  [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "lol"]]]
+                ]
+              ]
+            ], [:pi_lit_str, "mystr"], [:pi_lit_str, "lol"]]
+          ]
+        ],
+
+        [:send, 
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]],
+          [
+            [:pi_lit_str, "my_method_name"],
+            [:pi_lit_str, "some cool string"],
+            [:pi_lit_str, "another string"],
+          ]
+        ]
+      ]
+    out.should eq("some cool string\nanother string\n")
+  end
+
   it "can query a string for its length" do
     pending
     out = compile_and_execute [:pb_block, 

@@ -217,17 +217,16 @@ C
         valname = name + '_val'
 
         procedure = self.compile_sexp(primitive.shift)
-        if argname = primitive.shift
-          argspec = self.compile_sexp([:send, :kernel, [[:pi_lit_str, "lvar_assign"], argname, [:_raw, "gs_stack_pointer->parameters[2]"]]])
-        else
-          argspec = ""
+        args = []
+        while argname = primitive.shift
+          args << self.compile_sexp([:send, :kernel, [[:pi_lit_str, "lvar_assign"], argname, [:_raw, "gs_stack_pointer->parameters[#{args.length+2}]"]]])
         end
         func = <<C
 
 void #{funcname}(void) {
   INFO("inside lambda");
 
-  #{argspec}
+  #{args.join("\n")}
 
   #{procedure}
 
