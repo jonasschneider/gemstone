@@ -38,7 +38,7 @@ module Gemstone
         'def' blank target:variable_or_method_name '.' method_name:variable_or_method_name args:method_definition_arguments? blank body:block_without_header {
           def sexp
             lambda = [:ps_push_lambda, body.sexp]
-            lambda << [:pi_lit_str, args.variable_or_method_name.text_value] unless args.empty?
+            lambda.concat args.name_literals unless args.empty?
             [:send,
               [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, target.text_value]]],
               [
@@ -52,7 +52,14 @@ module Gemstone
       end
 
       rule method_definition_arguments
-        '(' variable_or_method_name ')'
+        '(' first_name:variable_or_method_name tail:("," blank? name:variable_or_method_name)* ')' {
+          def name_literals
+            names = [first_name] + tail.elements.map{|e|e.name}
+            names.map do |n|
+              [:pi_lit_str, n.text_value]
+            end
+          end
+        }
       end
 
       rule block_without_header
@@ -89,7 +96,7 @@ module Gemstone
       end
 
       rule method_call
-        target:(name:variable_or_method_name ".")? method:variable_or_method_name optional_arg:(blank arg:expression)? {
+        target:(name:variable_or_method_name ".")? method:variable_or_method_name optional_arg:(space arg:expression)? {
           def sexp
             has_target = target.respond_to?(:name)
             has_arg = optional_arg.respond_to?(:arg)
@@ -129,6 +136,10 @@ module Gemstone
             [symbol.name.to_sym]
           end
         }
+      end
+
+      rule space
+        " "+
       end
 
       rule blank

@@ -97,4 +97,32 @@ describe Gemstone::Parser do
       ]
     ])
   end
+
+  it "parses defining a method that takes two parameters" do
+    code = "def a.hello(mystr, lol)\nputs mystr\nputs lol\nend"
+
+    described_class.parse(code).should eq([:pb_block, 
+      [:send,
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
+          [
+            [:pi_lit_str, "define_method"],
+            [:pi_lit_str, "hello"],
+            [:ps_push_lambda, [:pb_block,
+              [:send, :kernel,
+                [
+                  [:pi_lit_str, "puts"],
+                  [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "mystr"]]]
+                ]
+              ],
+              [:send, :kernel,
+                [
+                  [:pi_lit_str, "puts"],
+                  [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "lol"]]]
+                ]
+              ]
+            ], [:pi_lit_str, "mystr"], [:pi_lit_str, "lol"]]
+          ]
+        ]
+    ])
+  end
 end
