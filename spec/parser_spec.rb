@@ -125,4 +125,18 @@ describe Gemstone::Parser do
         ]
     ])
   end
+
+  it "parses calling a method of a local variable with two string parameters" do
+    code = "a.say 'hello', world"
+    described_class.parse(code).should eq([:pb_block, 
+      [:send, 
+        [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "a"]]],
+        [
+          [:pi_lit_str, "say"],
+          [:pi_lit_str, "hello"],
+          [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, "world"]]]
+        ]
+      ]
+    ])
+  end
 end

@@ -3,7 +3,7 @@ module Gemstone
     grammar Syntax
 
       rule program
-        blank? bare_block {
+        space? bare_block {
           def sexp
             bare_block.sexp
           end
@@ -35,7 +35,7 @@ module Gemstone
       end
 
       rule method_definition
-        'def' blank target:variable_or_method_name '.' method_name:variable_or_method_name args:method_definition_arguments? blank body:block_without_header {
+        'def' space target:variable_or_method_name '.' method_name:variable_or_method_name args:method_definition_arguments? statement_separator body:block_without_header {
           def sexp
             lambda = [:ps_push_lambda, body.sexp]
             lambda.concat args.name_literals unless args.empty?
@@ -52,7 +52,7 @@ module Gemstone
       end
 
       rule method_definition_arguments
-        '(' first_name:variable_or_method_name tail:("," blank? name:variable_or_method_name)* ')' {
+        '(' first_name:variable_or_method_name tail:("," space? name:variable_or_method_name)* ')' {
           def name_literals
             names = [first_name] + tail.elements.map{|e|e.name}
             names.map do |n|
@@ -71,7 +71,7 @@ module Gemstone
       end
 
       rule bare_block
-        head:line tail:(blank l:line)* {
+        head:line tail:(statement_separator l:line)* {
           def sexp
             lines = [head] + tail.elements.map{|e|e.l}
             out = [:pb_block]
@@ -96,16 +96,17 @@ module Gemstone
       end
 
       rule method_call
-        target:(name:variable_or_method_name ".")? method:variable_or_method_name optional_arg:(space arg:expression)? {
+        target:(name:variable_or_method_name ".")? method:variable_or_method_name args:call_arguments? {
           def sexp
             has_target = target.respond_to?(:name)
-            has_arg = optional_arg.respond_to?(:arg)
-            if !has_target and !has_arg
+            has_args = args.respond_to?(:sexps)
+            if !has_target and !has_args
+              #raise args.inspect if method.text_value == 'puts'
               return [:send, :kernel, [[:pi_lit_str, "lvar_get"], [:pi_lit_str, method.text_value]]]
             end
 
-            if has_arg
-              argz = [[:pi_lit_str, method.text_value], optional_arg.arg.sexp]
+            if has_args
+              argz = [[:pi_lit_str, method.text_value]].concat args.sexps
             else
               argz = [[:pi_lit_str, method.text_value]]
             end
@@ -122,8 +123,16 @@ module Gemstone
         }
       end
 
+      rule call_arguments
+        head:(space arg:expression) tail:("," space? arg:expression)* {
+          def sexps
+            names = [head.arg.sexp] + tail.elements.map{|e|e.arg.sexp}
+          end
+        }
+      end
+
       rule lvar_assignment
-        variable_or_method_name blank? '=' blank? expression {
+        variable_or_method_name space? '=' space? expression {
           def sexp
             [:send, :kernel, [[:pi_lit_str, "lvar_assign"], [:pi_lit_str, variable_or_method_name.text_value], expression.sexp]]
           end
@@ -131,7 +140,7 @@ module Gemstone
       end
 
       rule primitive
-        "Gemstone.primitive" blank symbol {
+        "Gemstone.primitive" space symbol {
           def sexp
             [symbol.name.to_sym]
           end
@@ -142,8 +151,8 @@ module Gemstone
         " "+
       end
 
-      rule blank
-        [ \n]+
+      rule statement_separator
+        space? "\n" space?
       end
 
       rule string_literal
